@@ -1,7 +1,8 @@
 appId: com.freshenapp.freshen
 ---
 # Validation: submit empty form -> verify error messages appear
-- launchApp
+- launchApp:
+    clearState: true
 - waitForAnimationToEnd
 
 # Tap FAB to add a new entry

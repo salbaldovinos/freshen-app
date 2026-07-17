@@ -1,7 +1,8 @@
 appId: com.freshenapp.freshen
 ---
 # Sort records: add multiple records -> change sort order -> verify reordering
-- launchApp
+- launchApp:
+    clearState: true
 - waitForAnimationToEnd
 
 # Add first record: "Clover"
@@ -9,6 +10,7 @@ appId: com.freshenapp.freshen
 - waitForAnimationToEnd
 - tapOn: "e.g. Daisy"
 - inputText: "Clover"
+- hideKeyboard
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN
@@ -20,6 +22,7 @@ appId: com.freshenapp.freshen
 - waitForAnimationToEnd
 - tapOn: "e.g. Daisy"
 - inputText: "Daisy"
+- hideKeyboard
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN
@@ -31,6 +34,7 @@ appId: com.freshenapp.freshen
 - waitForAnimationToEnd
 - tapOn: "e.g. Daisy"
 - inputText: "Amber"
+- hideKeyboard
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN
@@ -47,7 +51,7 @@ appId: com.freshenapp.freshen
 - waitForAnimationToEnd
 
 # Select "Animal name (A-Z)" sort option
-- tapOn: "Animal name (A\u2013Z)"
+- tapOn: "Animal name (A–Z)"
 - waitForAnimationToEnd
 
 # Verify all records are still visible (order is visual, just confirm they exist)

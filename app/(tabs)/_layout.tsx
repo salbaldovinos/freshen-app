@@ -52,7 +52,7 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => <TabIcon label={'\u2699'} color={color} />,
+          tabBarIcon: ({ color }) => <TabIcon label={'\u2699\ufe0e'} color={color} />,
         }}
       />
     </Tabs>

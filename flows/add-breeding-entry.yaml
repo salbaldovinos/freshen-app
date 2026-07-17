@@ -1,7 +1,8 @@
 appId: com.freshenapp.freshen
 ---
 # Happy path: launch -> empty state -> tap + -> fill form -> save -> verify card appears
-- launchApp
+- launchApp:
+    clearState: true
 - waitForAnimationToEnd
 
 # Verify empty state
@@ -26,6 +27,9 @@ appId: com.freshenapp.freshen
 
 # Species defaults to Goat, gestation defaults to 150 — no need to change
 
+# Dismiss the keyboard so the Save button is reachable
+- hideKeyboard
+
 # Scroll down to the Save button and tap it
 - scrollUntilVisible:
     element: "Save"
@@ -33,7 +37,7 @@ appId: com.freshenapp.freshen
 - tapOn: "Save"
 - waitForAnimationToEnd
 
-# Verify the card appears on the home screen
+# Verify the card appears on the home screen (sire renders as "× Thunder")
 - assertVisible: "Daisy"
-- assertVisible: "Thunder"
+- assertVisible: "× Thunder"
 - assertVisible: "BRED"

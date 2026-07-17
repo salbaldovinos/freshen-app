@@ -1,7 +1,8 @@
 appId: com.freshenapp.freshen
 ---
 # Mark pregnant: add a record -> long press -> mark pregnant -> verify badge changes
-- launchApp
+- launchApp:
+    clearState: true
 - waitForAnimationToEnd
 
 # First, add a breeding record
@@ -11,6 +12,7 @@ appId: com.freshenapp.freshen
 - inputText: "Buttercup"
 - tapOn: "e.g. Buck (optional)"
 - inputText: "Rocky"
+- hideKeyboard
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN

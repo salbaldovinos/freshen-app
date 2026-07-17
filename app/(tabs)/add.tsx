@@ -117,6 +117,7 @@ export default function AddScreen() {
         className="flex-1 bg-parchment"
         contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {/* Only render form in edit mode once we have the existing record */}
         {isEditMode && !existingRecord ? null : (

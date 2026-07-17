@@ -1,7 +1,8 @@
 appId: com.freshenapp.freshen
 ---
-# Log birth: add a record -> navigate to detail -> log birth -> verify status changes
-- launchApp
+# Log birth: add a record -> action sheet -> log birth -> verify status changes
+- launchApp:
+    clearState: true
 - waitForAnimationToEnd
 
 # First, add a breeding record
@@ -11,6 +12,7 @@ appId: com.freshenapp.freshen
 - inputText: "Clover"
 - tapOn: "e.g. Buck (optional)"
 - inputText: "Duke"
+- hideKeyboard
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN
@@ -28,18 +30,25 @@ appId: com.freshenapp.freshen
 - tapOn: "Log birth"
 - waitForAnimationToEnd
 
-# Verify we are on the Log birth screen
-- assertVisible: "Log birth"
+# Verify we are on the Log birth screen (title includes the animal name)
+- assertVisible: "Log birth — Clover"
 
 # Birth date defaults to today — no need to change
 
-# Fill in offspring counts — tap the does field and enter 2
-- tapOn: "Doe (female)"
+# Offspring count fields show placeholder "0"; their labels are not tappable
+# inputs, so tap the first remaining "0" input each time: Doe (female) first
+- tapOn:
+    text: "0"
+    index: 0
 - inputText: "2"
+- hideKeyboard
 
-# Fill in bucks count
-- tapOn: "Buck (male)"
+# After filling does, the first remaining "0" input is Buck (male)
+- tapOn:
+    text: "0"
+    index: 0
 - inputText: "1"
+- hideKeyboard
 
 # Tap the save button
 - scrollUntilVisible:
