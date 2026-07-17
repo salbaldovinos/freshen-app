@@ -477,6 +477,8 @@ npx maestro test flows/          # All flows pass
 
 ### 7.0 — External account setup (user + agent together, blocking for 7A)
 
+> **Click-by-click walkthrough with exact values and ordering: `_dev/phase-7-account-setup.md`**
+
 Accounts/dashboards the user must create or have access to before agents can finish 7A:
 
 - [ ] **Clerk** — create application "Freshen"; enable email/password with email verification code; create JWT template named `powersync` (`aud` = PowerSync instance URL, lifetime 60 min); note publishable key + secret key + JWKS URL
