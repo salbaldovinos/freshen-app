@@ -531,15 +531,17 @@ Accounts/dashboards the user must create or have access to before agents can fin
 - [x] Deployed to production via git push (3 build fixes: runtime spec, TS 5.9 pin, ESM .js extensions); unauthenticated 401s verified live. 200-with-token test pending a real Clerk session. Original: Deploy: `vercel deploy` (preview) → smoke-test 401 without token, 200 with token → `vercel deploy --prod`
 
 #### Agent C: PowerSync Cloud Sync
+
+> **7B architecture decision (flagged 2026-07-17):** the app reads/writes via expo-sqlite + drizzle while PowerSync manages its own database — drizzle writes never enter PowerSync's CRUD queue. Unify the local data path (likely `@powersync/drizzle-driver`) before sync can work end-to-end.
 **PRD ref:** Feature 2.3 (UX unchanged); auth via Clerk JWT, backend via Agent B's upload endpoint
 
 **Interfaces — consumes:** Clerk `getToken({ template: 'powersync' })`; `POST /api/sync/upload` (Agent B). **Produces:** `lib/sync.ts`: `initSync(userId): Promise<void>`, `teardownSync(): Promise<void>`, `useSyncStatus(): 'synced' | 'syncing' | 'offline'`.
 
-- [ ] Install `@powersync/react-native` (+ peer deps; `--legacy-peer-deps`)
-- [ ] Create `db/powersync-schema.ts` — PowerSync schema mirroring `breeding_records` + `births`
-- [ ] Create `lib/sync.ts` — PowerSync init gated on paid + authenticated; `fetchCredentials()` returns `{ endpoint: EXPO_PUBLIC_POWERSYNC_URL, token: await getToken({ template: 'powersync' }) }`; `uploadData()` drains `getCrudBatch()` → maps CrudEntry ops to the upload contract → POST → `complete()` on 200, throw on failure (PowerSync retries)
+- [x] Install `@powersync/react-native` 1.35.9 + `@journeyapps/react-native-quick-sqlite` peer (2026-07-17)
+- [x] Create `db/powersync-schema.ts` — PowerSync schema mirroring `breeding_records` + `births` (user_id set server-side, omitted client-side)
+- [x] Create `lib/sync.ts` (own db file `freshen-sync.db` — distinct from drizzle's) — init gated on paid + authenticated; `fetchCredentials()` returns `{ endpoint: EXPO_PUBLIC_POWERSYNC_URL, token: await getToken({ template: 'powersync' }) }`; `uploadData()` drains `getCrudBatch()` → maps CrudEntry ops to the upload contract → POST → `complete()` on 200, throw on failure (PowerSync retries)
 - [ ] PowerSync dashboard: connect Neon as source; set auth to Clerk JWKS URL; sync rules — one bucket per user: `SELECT * FROM breeding_records WHERE user_id = request.user_id()`, same for `births`
-- [ ] Create `components/breeding/StatusIndicator.tsx` — synced (cloud + check, green) / syncing (cloud + arrows, blue, animated) / offline (cloud + slash, gray); tap → bottom sheet with last-sync time
+- [x] Create `components/breeding/StatusIndicator.tsx` — synced (cloud + check, green) / syncing (cloud + arrows, blue, animated) / offline (cloud + slash, gray); tap → bottom sheet with last-sync time
 - [ ] Add StatusIndicator to home header (paid tier only); free tier: PowerSync never initialized
 - [ ] Manual test: paid+authed on two simulators → record created on A appears on B; airplane-mode edit on A syncs after reconnect
 

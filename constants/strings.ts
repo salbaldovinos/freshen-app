@@ -243,3 +243,13 @@ export const RESTORE_SUCCESS = 'Purchase restored successfully.';
 export const RESTORE_NONE_FOUND =
   'No active purchases found. If you believe this is an error, contact support.';
 export const RESTORE_ERROR = 'Restore failed. Check your connection and try again.';
+
+// Cloud sync status indicator (PRD Feature 2.3)
+export const SYNC_STATUS_SYNCED = 'Synced';
+export const SYNC_STATUS_SYNCING = 'Syncing';
+export const SYNC_STATUS_OFFLINE = 'Offline';
+export const SYNC_SHEET_TITLE = 'Cloud sync';
+export const SYNC_LAST_SYNCED_LABEL = 'Last synced';
+export const SYNC_NEVER_SYNCED = 'Not synced yet.';
+export const SYNC_OFFLINE_MESSAGE =
+  'Working offline — your data is saved locally and will sync when you reconnect.';
