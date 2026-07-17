@@ -10,7 +10,7 @@ Everything here is on free tiers. No Apple/Google developer accounts needed yet 
 
 ## 1. Clerk — application + keys [DONE 2026-07-17]
 
-Completed via `clerk init`: app `Freshen` (`app_3GeBlreHlRJUN2oUi3chkQYhT3h`), publishable key in `.env`, secret key in `backend/.env`. Remaining Clerk work is step 6 (JWT template) plus one check: **Dashboard → Native applications → confirm the Native API is enabled.** Original steps kept for reference:
+Completed via `clerk init`: app `Freshen` (`app_3GeBlreHlRJUN2oUi3chkQYhT3h`), publishable key in `.env`, secret key in `backend/.env`. Remaining Clerk work is step 6 (JWT template) plus one check: **Dashboard → Native applications → confirm the Native API is enabled.** **Instance config adjusted via CLI (2026-07-17, live signup E2E findings):** `auth_username` disabled for sign-up/sign-in (clerk init default conflicted with the PRD's email+password flow — sign-ups stalled at missing_requirements) and `bot_protection.captcha_enabled` set to false on the DEV instance (automated test sessions fail Clerk's invisible checks). **Both must be revisited for the production instance in Phase 10: re-enable bot protection; keep username disabled.** Original steps kept for reference:
 
 1. Go to https://clerk.com → sign up (GitHub login is fine) → **Create application**.
 2. Name: `Freshen`. Sign-in options: enable **Email** only (leave Google/Apple off for v1).

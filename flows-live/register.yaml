@@ -1,0 +1,45 @@
+appId: com.freshenapp.freshen
+---
+# LIVE flow — talks to the Clerk DEV instance; excluded from `maestro test flows/`.
+# Uses a +clerk_test email (magic code 424242). Requires: dev instance with bot
+# protection off and username disabled. Delete the user in Clerk between runs
+# (clerk api /users/<id> -X DELETE --yes) or change the email.
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+
+# Welcome → registration
+- tapOn: "Get started free"
+- waitForAnimationToEnd
+- assertVisible: "Create your account"
+
+# Fill email + password
+- tapOn: "you@example.com"
+- inputText: "freshen-e2e+clerk_test@example.com"
+# Maestro can't type into iOS secure fields — toggle visibility first
+- tapOn: "Show"
+- tapOn: "At least 8 characters"
+- inputText: "FreshenTest123"
+
+# Submit — button sits above the keyboard on this screen, no dismissal needed
+- tapOn: "Create account"
+
+# Verification-code step (Clerk test code)
+- extendedWaitUntil:
+    visible: "Check your email"
+    timeout: 20000
+- tapOn: "123456"
+- inputText: "424242"
+- tapOn: "Verify"
+
+# Should land on the signed-in home (empty state)
+- extendedWaitUntil:
+    visible: "No breeding records yet. Tap + to add your first entry."
+    timeout: 20000
+
+# Relaunch WITHOUT clearState — session must persist (token cache)
+- launchApp
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "No breeding records yet. Tap + to add your first entry."
+    timeout: 15000
