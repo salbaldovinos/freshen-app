@@ -122,7 +122,7 @@ npx expo run:android             # Android emulator
 npx drizzle-kit generate         # Generate DB migrations
 npx drizzle-kit migrate          # Apply migrations
 npx jest --coverage              # Unit tests (90%+ on lib/, 80%+ overall)
-npx maestro test flows/          # E2E tests
+maestro test flows/              # E2E tests — see "E2E testing notes" below
 npx tsc --noEmit                 # Type check (must pass before commit)
 npx eslint . --fix               # Lint
 ```
@@ -134,6 +134,8 @@ npx eslint . --fix               # Lint
 - **The app name must always be imported from `constants/app.ts` as `APP_NAME` — never write the string "Freshen" directly in component or screen code**
 - **ALL date math lives exclusively in `lib/gestation.ts`** — use date-fns functions (differenceInCalendarDays, addDays, parseISO). Never use raw `new Date()` arithmetic anywhere.
 - `dueDate` is always derived, never stored. Compute via `calculateDueDate(pairingDate, gestationDays)`. Sort by due date in-memory after computing.
+- **Generate IDs with `Crypto.randomUUID()` from `expo-crypto`** — never the global `crypto`, which does not exist in Hermes release builds (dev builds mask this; it shipped as every-insert-fails until E2E caught it)
+- **jest is pinned to `~29.7.0`** — jest-expo 55 targets jest 29 internals; jest 30 breaks component-test suite loading. Don't bump without bumping Expo.
 - Zod schemas defined in `lib/schemas.ts` and imported where needed
 - All tier-gating logic lives in `lib/tierChecks.ts` — no tier checks in UI components
 - Follow patterns in existing query files when adding new DB queries
@@ -169,9 +171,18 @@ npx eslint . --fix               # Lint
 | Birth Logged | Birth record exists | `#D4E8F7` | `#1A5E8A` |
 | Archived | `archived = true` | `#EAE4DC` | `#7A6652` |
 
+## E2E testing notes (learned 2026-07-17, keep flows consistent with these)
+
+- Maestro needs a Java runtime: `brew install openjdk`, then export `JAVA_HOME`/`PATH` from `/usr/local/opt/openjdk`.
+- **Run flows against a Release build** (`npx expo run:ios --configuration Release`). Dev-client builds break `launchApp: clearState` (the cleared app loses its Metro connection) and hide release-only bugs.
+- Every flow starts with `launchApp: clearState: true` — SQLite persists otherwise and flows contaminate each other.
+- `BreedingCard` is one flattened iOS accessibility element (its Pressable concatenates all card text). Match card content with substring regexes (`.*Daisy.*`), never exact text. Standalone texts (headers, sheet items, form labels) match exactly.
+- After a save, wait for the home header count (`extendedWaitUntil: visible: "N active breedings."`) before asserting — the typed name also matches the form input, and plain asserts time out during the save→navigate→refetch transition.
+- Dismiss the keyboard with an explicit `swipe` from `50%, 40%` to `50%, 15%` (form ScrollViews have `keyboardDismissMode="on-drag"`). Maestro's `hideKeyboard` is flaky on iOS; a centered swipe lands on the keyboard itself.
+
 ## Do NOT modify
 
-- `components/ui/` — react-native-reusables components; re-copy from source if updates needed
+- `components/ui/` — react-native-reusables components; re-copy from source if updates needed. Exception: `sheet.tsx` is custom-written (no upstream source); its two wrapper Pressables must keep `accessible={false}` or iOS flattens the sheet and VoiceOver/E2E cannot reach the items
 - `db/migrations/` — never edit manually; always use `drizzle-kit generate`
 - `_discovery/` — reference documents, not code
 
