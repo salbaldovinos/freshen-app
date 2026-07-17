@@ -1,7 +1,8 @@
 appId: com.freshenapp.freshen
 ---
 # Sort records: add multiple records -> change sort order -> verify reordering
-- launchApp
+- launchApp:
+    clearState: true
 - waitForAnimationToEnd
 
 # Add first record: "Clover"
@@ -9,48 +10,63 @@ appId: com.freshenapp.freshen
 - waitForAnimationToEnd
 - tapOn: "e.g. Daisy"
 - inputText: "Clover"
+- swipe:
+    start: 50%, 40%
+    end: 50%, 15%
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN
 - tapOn: "Save"
-- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "1 active breeding."
+    timeout: 10000
 
 # Add second record: "Daisy"
 - tapOn: "+"
 - waitForAnimationToEnd
 - tapOn: "e.g. Daisy"
 - inputText: "Daisy"
+- swipe:
+    start: 50%, 40%
+    end: 50%, 15%
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN
 - tapOn: "Save"
-- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "2 active breedings."
+    timeout: 10000
 
 # Add third record: "Amber"
 - tapOn: "+"
 - waitForAnimationToEnd
 - tapOn: "e.g. Daisy"
 - inputText: "Amber"
+- swipe:
+    start: 50%, 40%
+    end: 50%, 15%
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN
 - tapOn: "Save"
-- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "3 active breedings."
+    timeout: 10000
 
 # Verify all three records are visible
-- assertVisible: "Clover"
-- assertVisible: "Daisy"
-- assertVisible: "Amber"
+- assertVisible: ".*Amber.*"
+- assertVisible: ".*Clover.*"
+- assertVisible: ".*Daisy.*"
 
 # Tap the Sort button to open the sort sheet
 - tapOn: "Sort"
 - waitForAnimationToEnd
 
 # Select "Animal name (A-Z)" sort option
-- tapOn: "Animal name (A\u2013Z)"
+- tapOn: "Animal name (A–Z)"
 - waitForAnimationToEnd
 
 # Verify all records are still visible (order is visual, just confirm they exist)
-- assertVisible: "Amber"
-- assertVisible: "Clover"
-- assertVisible: "Daisy"
+- assertVisible: ".*Amber.*"
+- assertVisible: ".*Clover.*"
+- assertVisible: ".*Daisy.*"

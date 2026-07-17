@@ -193,6 +193,20 @@ describe('birthFormSchema', () => {
     }
   });
 
+  it('rejects a count above 20 with the PRD copy', () => {
+    const result = birthSchema.safeParse({
+      ...validBirth,
+      doesCount: 21,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const highError = result.error.issues.find(
+        (i) => i.message === 'Offspring count seems high. Please double-check.',
+      );
+      expect(highError).toBeDefined();
+    }
+  });
+
   it('accepts doesCount=5, bucksCount=0', () => {
     const result = birthSchema.safeParse({
       ...validBirth,

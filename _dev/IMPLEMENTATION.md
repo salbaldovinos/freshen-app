@@ -273,8 +273,8 @@ npx tsc --noEmit        # Must pass
   - Long-press → action sheet with: Edit Entry, Mark Pregnant (conditional), Log Birth, Archive (conditional), Delete
   - Uses `GestationBadge` for status
   - Uses Cormorant for animal name, DM Sans for labels
-- [ ] Write `tests/components/BreedingCard.test.tsx` — render with a fixture record per status (`bred`, `pregnant`, `overdue`, `birth_logged`, `archived`); assert badge label text per status; assert "OVERDUE" banner text present only for `overdue`; assert "× [sire]" when sire set and "Sire unknown" when null. Assert on rendered text and `testID`s, not computed NativeWind styles (class → style resolution is unreliable under jest-expo).
-- [ ] Write `tests/components/GestationBadge.test.tsx` — one render per status; assert label text ("Bred", "Pregnant", "Overdue", "Birth logged", "Archived" per `constants/strings.ts`) and `testID={'badge-' + status}` (add the testID to the component if missing)
+- [x] Write `tests/components/BreedingCard.test.tsx` — render with a fixture record per status (`bred`, `pregnant`, `overdue`, `birth_logged`, `archived`); assert badge label text per status; assert "OVERDUE" banner text present only for `overdue`; assert "× [sire]" when sire set and "Sire unknown" when null. Assert on rendered text and `testID`s, not computed NativeWind styles (class → style resolution is unreliable under jest-expo).
+- [x] Write `tests/components/GestationBadge.test.tsx` — one render per status; assert label text ("Bred", "Pregnant", "Overdue", "Birth logged", "Archived" per `constants/strings.ts`) and `testID={'badge-' + status}` (add the testID to the component if missing)
 
 #### Agent B: Home Screen (Breeding List)
 **PRD ref:** Feature 1.1
@@ -308,7 +308,7 @@ npx tsc --noEmit        # Must pass
   - **Edit mode:** title "Edit Breeding", pre-populated fields, "Save Changes" button
   - Save → write to SQLite via breeding store, navigate back, toast "Breeding record saved."
   - Delete (edit mode only) → confirmation dialog → delete → navigate back → toast "Record deleted."
-- [ ] Write `tests/components/BreedingForm.test.tsx` — submit empty form → "Animal name is required." renders; animal name of 51 chars → "Animal name must be 50 characters or less."; notes field shows live character counter ("N/500"); valid submit calls the `onSubmit` prop with parsed `BreedingFormData` (mock the store/navigation, exact error copy from `lib/schemas.ts`)
+- [x] Write `tests/components/BreedingForm.test.tsx` — submit empty form → "Animal name is required." renders; animal name of 51 chars → "Animal name must be 50 characters or less."; notes field shows live character counter ("N/500"); valid submit calls the `onSubmit` prop with parsed `BreedingFormData` (mock the store/navigation, exact error copy from `lib/schemas.ts`)
 
 ### Wave 4B — Detail + Birth Screens (Parallelizable — 2 agents)
 
@@ -356,17 +356,17 @@ npx expo start                   # App launches, screens render
 ```
 
 **Manual verification:**
-- [ ] Empty state renders on first launch
-- [ ] Can add a breeding record and see it on home screen
-- [ ] Card shows correct status, days bred, due date
+- [x] Empty state renders on first launch (screenshot + E2E)
+- [x] Can add a breeding record and see it on home screen (E2E)
+- [x] Card shows correct status, days bred, due date (screenshot: 0 days bred / 150 left / Dec 14)
 - [ ] Can tap card → detail screen renders all sections
-- [ ] Can mark pregnant → badge changes immediately
-- [ ] Can log birth → status updates to "Birth Logged"
+- [x] Can mark pregnant → badge changes immediately (E2E incl. toast)
+- [x] Can log birth → status updates to "Birth Logged" (E2E)
 - [ ] Can edit and delete records
 - [ ] Sort options work and persist
-- [ ] Long-press action sheet shows correct options per record state
+- [x] Long-press action sheet shows correct options per record state (screenshot: Edit entry / Mark pregnant / Log birth / Archive / Delete)
 - [ ] Overdue banner shows for records past due date
-- [ ] Form validation shows all required error messages
+- [x] Form validation shows all required error messages (E2E + unit tests)
 
 ---
 
@@ -444,16 +444,16 @@ npx expo start                   # Full MVP walkthrough
 
 **Agent assignment:** Single agent
 
-- [ ] Install Maestro CLI: `curl -fsSL "https://get.maestro.mobile.dev" | bash`, then verify `maestro --version`
+- [x] Install Maestro CLI: `curl -fsSL "https://get.maestro.mobile.dev" | bash`, then verify `maestro --version`
 - [x] Create `flows/add-breeding-entry.yaml` — happy path: launch → empty state → tap + → fill form → save → verify card
 - [x] Create `flows/add-breeding-validation.yaml` — submit empty form → verify error messages
 - [x] Create `flows/mark-pregnant.yaml` — long press → mark pregnant → verify badge change
 - [x] Create `flows/log-birth.yaml` — long press → log birth → verify status change
 - [x] Create `flows/sort-records.yaml` — change sort order → verify list reorders
-- [ ] Build a dev client first (`npx expo run:ios`) — Maestro drives the installed app, `appId: com.freshenapp.freshen`
-- [ ] Run all flows on iOS simulator: `maestro test flows/` (fix flow YAMLs if selectors drifted from implemented UI — flows were written before ever being run)
+- [x] Build a dev client first (`npx expo run:ios`) — Maestro drives the installed app, `appId: com.freshenapp.freshen`
+- [x] Run all flows on iOS simulator — 5/5 passing against a Release build (2026-07-17). Required extensive flow fixes (clearState, keyboard-dismiss swipe, home-settle waits, substring regexes for flattened card labels) and surfaced three app bugs, all fixed: missing expo-crypto (inserts failed in release), Sheet accessibility flattening (VoiceOver + E2E could not reach items), raw Zod copy on offspring max instead of PRD copy
 - [ ] Run all flows on Android emulator (`npx expo run:android`, then `maestro test flows/`)
-- [ ] Fix any platform-specific issues
+- [x] Fix any platform-specific issues (iOS; Android pending)
 
 **Gate check:**
 ```bash

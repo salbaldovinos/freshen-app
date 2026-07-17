@@ -1,0 +1,24 @@
+{
+  "name": "freshen-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Freshen livestock breeding tracker — Vercel + Neon backend (Clerk auth, sync upload, RevenueCat webhook, Blob photos).",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clerk/backend": "^3.11.7",
+    "@neondatabase/serverless": "^1.1.0",
+    "@vercel/blob": "^2.6.1",
+    "drizzle-orm": "^0.45.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

@@ -154,6 +154,7 @@ export default function LogBirthScreen() {
         className="flex-1 bg-parchment"
         contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         {/* Birth Date */}
         <Input

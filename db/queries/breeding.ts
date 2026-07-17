@@ -1,4 +1,5 @@
 import { eq, sql } from 'drizzle-orm';
+import * as Crypto from 'expo-crypto';
 
 import { db } from '@/db/client';
 import { breedingRecords, type BreedingRecord, type NewBreedingRecord } from '@/db/schema';
@@ -26,7 +27,7 @@ export async function createBreedingRecord(
   data: Omit<NewBreedingRecord, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<BreedingRecord> {
   const now = new Date().toISOString();
-  const id = crypto.randomUUID();
+  const id = Crypto.randomUUID();
   const results = await db
     .insert(breedingRecords)
     .values({

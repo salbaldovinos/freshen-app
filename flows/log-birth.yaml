@@ -1,7 +1,8 @@
 appId: com.freshenapp.freshen
 ---
-# Log birth: add a record -> navigate to detail -> log birth -> verify status changes
-- launchApp
+# Log birth: add a record -> action sheet -> log birth -> verify status changes
+- launchApp:
+    clearState: true
 - waitForAnimationToEnd
 
 # First, add a breeding record
@@ -11,37 +12,46 @@ appId: com.freshenapp.freshen
 - inputText: "Clover"
 - tapOn: "e.g. Buck (optional)"
 - inputText: "Duke"
+- swipe:
+    start: 50%, 40%
+    end: 50%, 15%
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN
 - tapOn: "Save"
 - waitForAnimationToEnd
 
-# Verify the card is visible
-- assertVisible: "Clover"
+# Wait for the settled home screen — the count header exists only there
+- extendedWaitUntil:
+    visible: "1 active breeding."
+    timeout: 10000
+- assertVisible: ".*Clover.*"
 
 # Long press to open the action sheet
-- longPressOn: "Clover"
+- longPressOn: ".*Clover.*"
 - waitForAnimationToEnd
 
 # Tap "Log birth" from the action sheet
 - tapOn: "Log birth"
 - waitForAnimationToEnd
 
-# Verify we are on the Log birth screen
-- assertVisible: "Log birth"
+# Verify we are on the Log birth screen (title includes the animal name)
+- assertVisible: "Log birth — Clover"
 
 # Birth date defaults to today — no need to change
 
-# Fill in offspring counts — tap the does field and enter 2
-- tapOn: "Doe (female)"
+# Count fields hold a literal "0" value; the first match is Doe (female).
+# Typing appends, so "0" becomes "02" = 2 does. Bucks/stillborn stay 0 —
+# a second indexed tap is unreliable (stale hierarchy re-targets Doe).
+- tapOn:
+    text: "0"
+    index: 0
 - inputText: "2"
 
-# Fill in bucks count
-- tapOn: "Buck (male)"
-- inputText: "1"
-
 # Tap the save button
+- swipe:
+    start: 50%, 40%
+    end: 50%, 15%
 - scrollUntilVisible:
     element: "Save birth record"
     direction: DOWN
@@ -49,5 +59,7 @@ appId: com.freshenapp.freshen
 - waitForAnimationToEnd
 
 # Verify the status changed to BIRTH LOGGED on the home screen
-- assertVisible: "BIRTH LOGGED"
-- assertVisible: "Clover"
+- extendedWaitUntil:
+    visible: ".*BIRTH LOGGED.*"
+    timeout: 10000
+- assertVisible: ".*Clover.*"

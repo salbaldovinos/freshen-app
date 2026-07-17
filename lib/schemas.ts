@@ -14,6 +14,7 @@ import {
   ERROR_NOTES_BIRTH_MAX,
   ERROR_BIRTH_DATE_FUTURE,
   ERROR_BIRTH_DATE_BEFORE_PAIRING,
+  ERROR_OFFSPRING_COUNT_HIGH,
   ERROR_OFFSPRING_REQUIRED,
 } from '@/constants/strings';
 
@@ -87,9 +88,9 @@ export function createBirthFormSchema(pairingDate: string) {
           },
           { message: ERROR_BIRTH_DATE_BEFORE_PAIRING },
         ),
-      doesCount: z.number().int().min(0).max(20).default(0),
-      bucksCount: z.number().int().min(0).max(20).default(0),
-      stillbornCount: z.number().int().min(0).max(20).default(0),
+      doesCount: z.number().int().min(0).max(20, ERROR_OFFSPRING_COUNT_HIGH).default(0),
+      bucksCount: z.number().int().min(0).max(20, ERROR_OFFSPRING_COUNT_HIGH).default(0),
+      stillbornCount: z.number().int().min(0).max(20, ERROR_OFFSPRING_COUNT_HIGH).default(0),
       notes: z.string().max(300, ERROR_NOTES_BIRTH_MAX).optional(),
     })
     .refine((data) => data.doesCount + data.bucksCount > 0, {
