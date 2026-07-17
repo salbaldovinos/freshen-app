@@ -13,6 +13,7 @@ import 'react-native-reanimated';
 import { Toast } from '@/components/ui/toast';
 import { COLORS } from '@/constants/theme';
 import { useInitializeDatabase } from '@/db/client';
+import { useAuthGate } from '@/store/useAuthStore';
 import { useToastStore } from '@/store/useToastStore';
 
 export { ErrorBoundary } from 'expo-router';
@@ -98,6 +99,8 @@ function GlobalToast() {
 }
 
 function RootLayoutNav() {
+  useAuthGate();
+
   return (
     <ThemeProvider value={navTheme}>
       <Stack
@@ -111,6 +114,9 @@ function RootLayoutNav() {
           headerShadowVisible: false,
         }}
       >
+        <Stack.Screen name="welcome" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ title: '' }} />
+        <Stack.Screen name="register" options={{ title: '' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="breeding/[id]" options={{ title: '' }} />
         <Stack.Screen name="birth/[breedingId]" options={{ title: 'Log birth' }} />

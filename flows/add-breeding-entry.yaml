@@ -5,6 +5,10 @@ appId: com.freshenapp.freshen
     clearState: true
 - waitForAnimationToEnd
 
+# Fresh install lands on the welcome screen — proceed without an account
+- tapOn: "Continue without an account"
+- waitForAnimationToEnd
+
 # Verify empty state
 - assertVisible: "No breeding records yet. Tap + to add your first entry."
 
