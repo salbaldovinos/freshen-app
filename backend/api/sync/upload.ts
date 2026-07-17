@@ -1,8 +1,8 @@
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import { Pool } from '@neondatabase/serverless';
-import { errorResponse, requireUser } from '../../lib/auth';
-import { applyBatch, uploadBatchSchema } from '../../lib/syncUpload';
-import * as schema from '../../db/schema';
+import { errorResponse, requireUser } from '../../lib/auth.js';
+import { applyBatch, uploadBatchSchema } from '../../lib/syncUpload.js';
+import * as schema from '../../db/schema.js';
 
 export async function POST(request: Request): Promise<Response> {
   let userId: string;

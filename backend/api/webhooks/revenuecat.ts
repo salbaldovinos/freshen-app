@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import { Pool } from '@neondatabase/serverless';
-import { users } from '../../db/schema';
-import * as schema from '../../db/schema';
+import { users } from '../../db/schema.js';
+import * as schema from '../../db/schema.js';
 
 const PAID_EVENTS = new Set(['INITIAL_PURCHASE', 'RENEWAL', 'UNCANCELLATION']);
 const FREE_EVENTS = new Set(['EXPIRATION']);

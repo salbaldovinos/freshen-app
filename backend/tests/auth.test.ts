@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { HttpError, requireUser } from '../lib/auth';
+import { HttpError, requireUser } from '../lib/auth.js';
 
 import { verifyToken } from '@clerk/backend';
 

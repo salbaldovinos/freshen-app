@@ -1,5 +1,5 @@
 import { generateClientTokenFromReadWriteToken } from '@vercel/blob/client';
-import { errorResponse, requireUser } from '../../lib/auth';
+import { errorResponse, requireUser } from '../../lib/auth.js';
 
 export async function POST(request: Request): Promise<Response> {
   let userId: string;

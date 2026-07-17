@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { NeonDatabase } from 'drizzle-orm/neon-serverless';
-import * as schema from '../db/schema';
-import { applyBatch, uploadBatchSchema, type UploadOperation } from '../lib/syncUpload';
+import * as schema from '../db/schema.js';
+import { applyBatch, uploadBatchSchema, type UploadOperation } from '../lib/syncUpload.js';
 
 // Record every column/value pair passed to `eq(...)` so we can assert the WHERE
 // clauses scope to the authenticated user.

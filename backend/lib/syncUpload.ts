@@ -1,8 +1,8 @@
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { NeonDatabase } from 'drizzle-orm/neon-serverless';
-import * as schema from '../db/schema';
-import { breedingRecords, births } from '../db/schema';
+import * as schema from '../db/schema.js';
+import { breedingRecords, births } from '../db/schema.js';
 
 // ---------------------------------------------------------------------------
 // Request contract (backend-stack-decision.md):

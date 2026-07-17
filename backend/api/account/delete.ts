@@ -3,9 +3,9 @@ import { del, list } from '@vercel/blob';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import { Pool } from '@neondatabase/serverless';
 import { eq } from 'drizzle-orm';
-import { errorResponse, requireUser } from '../../lib/auth';
-import { births, breedingRecords, users } from '../../db/schema';
-import * as schema from '../../db/schema';
+import { errorResponse, requireUser } from '../../lib/auth.js';
+import { births, breedingRecords, users } from '../../db/schema.js';
+import * as schema from '../../db/schema.js';
 
 export async function POST(request: Request): Promise<Response> {
   let userId: string;
