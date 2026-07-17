@@ -119,3 +119,127 @@ export const SORT_DUE_DATE_DESC = 'Due date (latest first)';
 export const SORT_DATE_ADDED_NEWEST = 'Date added (newest first)';
 export const SORT_DATE_ADDED_OLDEST = 'Date added (oldest first)';
 export const SORT_NAME_AZ = 'Animal name (A\u2013Z)';
+
+// --- Auth (Feature 2.1) ---
+
+// Welcome screen
+export const AUTH_GET_STARTED = 'Get started free';
+export const AUTH_SIGN_IN = 'Sign in';
+export const AUTH_CONTINUE_WITHOUT_ACCOUNT = 'Continue without an account';
+
+// Shared field labels / placeholders
+export const AUTH_EMAIL_LABEL = 'Email';
+export const AUTH_EMAIL_PLACEHOLDER = 'you@example.com';
+export const AUTH_PASSWORD_LABEL = 'Password';
+export const AUTH_PASSWORD_PLACEHOLDER = 'At least 8 characters';
+export const AUTH_SHOW = 'Show';
+export const AUTH_HIDE = 'Hide';
+
+// Register screen
+export const AUTH_CREATE_ACCOUNT_TITLE = 'Create your account';
+export const AUTH_CREATE_ACCOUNT_BUTTON = 'Create account';
+export const AUTH_HAVE_ACCOUNT_PROMPT = 'Already have an account?';
+
+// Email verification step
+export const AUTH_VERIFY_TITLE = 'Check your email';
+export const authVerifySubtitle = (email: string) => `Enter the 6-digit code we sent to ${email}.`;
+export const AUTH_CODE_LABEL = 'Verification code';
+export const AUTH_CODE_PLACEHOLDER = '123456';
+export const AUTH_VERIFY_BUTTON = 'Verify';
+export const AUTH_RESEND_CODE = 'Resend code';
+export const AUTH_CHANGE_EMAIL = 'Use a different email';
+
+// Login screen
+export const AUTH_SIGN_IN_TITLE = 'Welcome back';
+export const AUTH_NO_ACCOUNT_PROMPT = "Don't have an account?";
+export const AUTH_FORGOT_PASSWORD = 'Forgot password?';
+
+// Forgot-password flow
+export const AUTH_RESET_TITLE = 'Reset your password';
+export const AUTH_RESET_EMAIL_SUBTITLE = "Enter your email and we'll send you a reset code.";
+export const AUTH_SEND_RESET_CODE = 'Send reset code';
+export const AUTH_RESET_CODE_SUBTITLE = 'Enter the code we emailed you and choose a new password.';
+export const AUTH_NEW_PASSWORD_LABEL = 'New password';
+export const AUTH_RESET_SUBMIT = 'Reset password';
+export const AUTH_BACK_TO_SIGN_IN = 'Back to sign in';
+
+// Auth error messages (PRD Feature 2.1 error table)
+export const AUTH_ERROR_EMAIL_EXISTS =
+  'An account with this email already exists. Sign in instead?';
+export const AUTH_ERROR_EMAIL_INVALID = 'Please enter a valid email address.';
+export const AUTH_ERROR_PASSWORD_SHORT = 'Password must be at least 8 characters.';
+export const AUTH_ERROR_PASSWORD_NO_UPPERCASE =
+  'Password must include at least one uppercase letter.';
+export const AUTH_ERROR_PASSWORD_NO_NUMBER = 'Password must include at least one number.';
+export const AUTH_ERROR_INCORRECT_CREDENTIALS = 'Incorrect email or password. Please try again.';
+export const AUTH_ERROR_NOT_VERIFIED =
+  'Please verify your email before signing in. Check your inbox.';
+export const AUTH_ERROR_NETWORK =
+  'Unable to connect. Check your internet connection and try again.';
+export const AUTH_ERROR_SERVER = 'Something went wrong on our end. Please try again in a moment.';
+export const AUTH_ERROR_SESSION_EXPIRED = 'Your session expired. Please sign in again.';
+// Not in the PRD table \u2014 copy invented for the code-based (not link-based) verification flow.
+export const AUTH_ERROR_CODE_INCORRECT = 'That code is incorrect. Please check and try again.';
+// Not in the PRD table \u2014 Clerk rejects breached passwords (form_password_pwned).
+export const AUTH_ERROR_PASSWORD_PWNED =
+  'This password has appeared in a data breach. Please choose a different one.';
+
+/**
+ * Maps a Clerk error `code` to the PRD Feature 2.1 error copy. Codes not tied to a
+ * specific field (or unrecognized) fall back to the generic server message; thrown
+ * exceptions (no code) are treated as network errors by the caller.
+ */
+export function authErrorMessage(code: string | undefined): string {
+  switch (code) {
+    case 'form_identifier_exists':
+      return AUTH_ERROR_EMAIL_EXISTS;
+    case 'form_param_format_invalid':
+      return AUTH_ERROR_EMAIL_INVALID;
+    case 'form_password_length_too_short':
+      return AUTH_ERROR_PASSWORD_SHORT;
+    case 'form_password_pwned':
+      return AUTH_ERROR_PASSWORD_PWNED;
+    case 'form_identifier_not_found':
+    case 'form_password_incorrect':
+      return AUTH_ERROR_INCORRECT_CREDENTIALS;
+    case 'identifier_not_verified':
+    case 'form_identifier_not_verified':
+      return AUTH_ERROR_NOT_VERIFIED;
+    case 'form_code_incorrect':
+    case 'verification_failed':
+    case 'verification_expired':
+      return AUTH_ERROR_CODE_INCORRECT;
+    default:
+      return AUTH_ERROR_SERVER;
+  }
+}
+
+// Paywall (PRD Feature 2.2)
+export const PAYWALL_HEADLINE = `Upgrade to ${APP_NAME} Pro`;
+export const PAYWALL_FEATURE_UNLIMITED = 'Unlimited animals';
+export const PAYWALL_FEATURE_SYNC = 'Cloud backup & sync';
+export const PAYWALL_FEATURE_EXTRAS = 'Photos, export & analytics';
+export const PAYWALL_TRIAL_BADGE = '7-day free trial';
+export const PAYWALL_CTA_START_TRIAL = 'Start free trial';
+export const PAYWALL_RESTORE = 'Restore purchases';
+export const PAYWALL_DISMISS = 'No thanks';
+export const PAYWALL_LOADING = 'Loading plans';
+export const PAYWALL_ERROR = 'Plans could not be loaded. Check your connection and try again.';
+
+// Species picker premium badge (PRD Feature 2.2)
+export const TIER_SPECIES_PREMIUM_BADGE = 'Premium';
+
+// Purchase errors (PRD Feature 2.6)
+export const PURCHASE_ERROR_NETWORK = 'Purchase failed — check your connection and try again.';
+export const PURCHASE_ERROR_UNAVAILABLE =
+  "This plan isn't available in your region. Contact support.";
+export const PURCHASE_ERROR_ALREADY_OWNED =
+  "You already have an active subscription. Tap 'Restore purchases' to access it.";
+export const PURCHASE_ERROR_GENERIC =
+  'Purchase could not be completed. Please try again or contact support.';
+
+// Restore results (PRD Feature 2.6)
+export const RESTORE_SUCCESS = 'Purchase restored successfully.';
+export const RESTORE_NONE_FOUND =
+  'No active purchases found. If you believe this is an error, contact support.';
+export const RESTORE_ERROR = 'Restore failed. Check your connection and try again.';

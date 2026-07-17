@@ -491,6 +491,8 @@ Accounts/dashboards the user must create or have access to before agents can fin
 - [ ] **RevenueCat** — create project; create `pro` entitlement; products: annual (w/ 7-day trial), monthly, lifetime. Requires App Store Connect + Play Console in-app products (depends on Phase 10 store accounts — can stub with sandbox until then)
 - [ ] **PostHog** — create project, note API key
 - [ ] Create `.env` (gitignored) with: `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, `EXPO_PUBLIC_POWERSYNC_URL`, `EXPO_PUBLIC_BACKEND_URL`, `EXPO_PUBLIC_POSTHOG_API_KEY`, `EXPO_PUBLIC_REVENUECAT_IOS_KEY`, `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`
+> **Naming decision (2026-07-17):** RevenueCat client keys are `EXPO_PUBLIC_REVENUECAT_IOS_KEY` / `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` (code + this doc). The PRD's `EXPO_PUBLIC_RC_API_KEY_*` names are superseded.
+
 - [ ] Set Vercel env vars on `freshen-backend`: `CLERK_SECRET_KEY`, `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN`, `REVENUECAT_WEBHOOK_AUTH`
 
 ### Wave 7A — Independent Integrations (Parallelizable — 6 agents)
@@ -504,11 +506,11 @@ Accounts/dashboards the user must create or have access to before agents can fin
 
 - [x] Install `@clerk/expo` and `expo-secure-store`; add `"@clerk/expo"` + `"expo-secure-store"` to `app.json` plugins (done via `clerk init` + `expo install`, 2026-07-17)
 - [x] Update `app/_layout.tsx` — root wrapped in `<ClerkProvider publishableKey={…} tokenCache={tokenCache}>` with `tokenCache` imported from `@clerk/expo/token-cache` (never a hand-rolled secure-store cache) (2026-07-17)
-- [ ] Add auth guard to `app/_layout.tsx`: no session AND no "skipped auth" flag → redirect to `/welcome` (do this together with the welcome screen, not before)
-- [ ] Update `store/useAuthStore.ts` — façade over Clerk's `useAuth`/`useUser` per the interface above; `deleteAccount()` → `POST ${EXPO_PUBLIC_BACKEND_URL}/api/account/delete` with bearer token, then Clerk `signOut()`
-- [ ] Create `app/welcome.tsx` — logo, APP_TAGLINE, "Get Started Free", "Sign In", "Continue without an account" (sets skipped-auth flag in AsyncStorage → home, free tier, no sync)
-- [ ] Create `app/register.tsx` — `useSignUp()` **method-based flow**: email (validated on blur) + password (show/hide toggle) → email-code verification screen → finalize. Must render `<View nativeID="clerk-captcha" />` (Clerk bot protection needs the mount point). Map Clerk error codes (`form_identifier_exists`, `form_password_pwned`, `form_password_length_too_short`, verification failures) to the PRD error-copy table in `constants/strings.ts`
-- [ ] Create `app/login.tsx` — `useSignIn()` **method-based flow**: `signIn.password({ identifier, password })` → `finalize()`; map `form_identifier_not_found` / `form_password_incorrect` to PRD copy; "Forgot password?" → method-based email-code reset flow
+- [x] Add auth guard to `app/_layout.tsx`: no session AND no "skipped auth" flag → redirect to `/welcome` (implemented as `useAuthGate()` in `store/useAuthStore.ts`, called from `RootLayoutNav` inside `ClerkProvider`; gates on `isLoaded` + skip-flag hydration before redirecting) (2026-07-17)
+- [x] Update `store/useAuthStore.ts` — façade over Clerk's `useAuth`/`useUser` per the interface above; `deleteAccount()` → `POST ${EXPO_PUBLIC_BACKEND_URL}/api/account/delete` with bearer token, then Clerk `signOut()` (2026-07-17)
+- [x] Create `app/welcome.tsx` — logo, APP_TAGLINE, "Get Started Free", "Sign In", "Continue without an account" (sets skipped-auth flag in AsyncStorage → home, free tier, no sync) (2026-07-17)
+- [x] Create `app/register.tsx` — `useSignUp()` **method-based flow**: email (validated on blur) + password (show/hide toggle) → email-code verification screen → finalize. Must render `<View nativeID="clerk-captcha" />` (Clerk bot protection needs the mount point). Map Clerk error codes (`form_identifier_exists`, `form_password_pwned`, `form_password_length_too_short`, verification failures) to the PRD error-copy table in `constants/strings.ts` (2026-07-17)
+- [x] Create `app/login.tsx` — `useSignIn()` **method-based flow**: `signIn.password({ identifier, password })` → `finalize()`; map `form_identifier_not_found` / `form_password_incorrect` to PRD copy; "Forgot password?" → method-based email-code reset flow (2026-07-17)
 - [ ] Session persistence across app restart and refresh on AppState foreground (Clerk SDK default behavior — verify, don't rebuild)
 - [ ] Manual test: register (real email) → verify code → land on home; kill app → still signed in; sign out → welcome
 
@@ -517,16 +519,16 @@ Accounts/dashboards the user must create or have access to before agents can fin
 
 **Interfaces — produces:** the four endpoints below at `EXPO_PUBLIC_BACKEND_URL`. All except the webhook require `Authorization: Bearer <Clerk JWT>`; all writes scoped to the token's `sub`, never a client-supplied user id.
 
-- [ ] Create `backend/` — standalone `package.json` (TypeScript, `@clerk/backend`, `drizzle-orm`, `@neondatabase/serverless`, `@vercel/blob`, `zod`), `vercel.json`, deployed as Vercel project `freshen-backend`
-- [ ] Create `backend/db/schema.ts` — Drizzle **Postgres** schema: `users` (id = Clerk user id, email, tier, created_at), `breeding_records`, `births` — column parity with mobile `db/schema.ts` plus `user_id` FK on both record tables
-- [ ] Push schema to Neon: `npx drizzle-kit push` (backend config); confirm logical replication enabled
-- [ ] Create `backend/lib/auth.ts` — `requireUser(req): Promise<string>` — verify bearer JWT via `@clerk/backend` `verifyToken()`, return `sub`; throw 401 otherwise
-- [ ] Create `backend/api/sync/upload.ts` — validate body with Zod against the batch contract (`op: PUT|PATCH|DELETE`, `table: breeding_records|births`, `id`, `data`); apply to Neon in a transaction; upsert for PUT, partial update for PATCH, delete for DELETE; force `user_id = sub`; `200 {}` / `400` / `401`
-- [ ] Create `backend/api/webhooks/revenuecat.ts` — check `Authorization` header equals `REVENUECAT_WEBHOOK_AUTH`; on `INITIAL_PURCHASE`/`RENEWAL`/`UNCANCELLATION` set `users.tier = 'paid'`, on `EXPIRATION` set `'free'` (key by `app_user_id` = Clerk user id)
-- [ ] Create `backend/api/account/delete.ts` — `requireUser` → delete Blob photos under `{userId}/`, delete Neon rows (births cascade), delete Clerk user via backend SDK; `200`
-- [ ] Create `backend/api/photos/upload-url.ts` — `requireUser` → issue Blob client-upload token for pathname `{userId}/breeding/{recordId}/{timestamp}.jpg` (Phase 8 consumes this)
-- [ ] Unit-test upload handler logic (Zod validation + op mapping) with Vitest or Jest in `backend/`; integration-test against Neon dev branch with a Clerk dev token
-- [ ] Deploy: `vercel deploy` (preview) → smoke-test 401 without token, 200 with token → `vercel deploy --prod`
+- [x] Create `backend/` — standalone `package.json` (TypeScript, `@clerk/backend`, `drizzle-orm`, `@neondatabase/serverless`, `@vercel/blob`, `zod`), `vercel.json`, deployed as Vercel project `freshen-backend`
+- [x] Create `backend/db/schema.ts` — Drizzle **Postgres** schema: `users` (id = Clerk user id, email, tier, created_at), `breeding_records`, `births` — column parity with mobile `db/schema.ts` plus `user_id` FK on both record tables
+- [x] Push schema to Neon (2026-07-17, tables + wal_level=logical + `powersync` publication verified by live query): `npx drizzle-kit push` (backend config); confirm logical replication enabled
+- [x] Create `backend/lib/auth.ts` — `requireUser(req): Promise<string>` — verify bearer JWT via `@clerk/backend` `verifyToken()`, return `sub`; throw 401 otherwise
+- [x] Create `backend/api/sync/upload.ts` — validate body with Zod against the batch contract (`op: PUT|PATCH|DELETE`, `table: breeding_records|births`, `id`, `data`); apply to Neon in a transaction; upsert for PUT, partial update for PATCH, delete for DELETE; force `user_id = sub`; `200 {}` / `400` / `401`
+- [x] Create `backend/api/webhooks/revenuecat.ts` — check `Authorization` header equals `REVENUECAT_WEBHOOK_AUTH`; on `INITIAL_PURCHASE`/`RENEWAL`/`UNCANCELLATION` set `users.tier = 'paid'`, on `EXPIRATION` set `'free'` (key by `app_user_id` = Clerk user id)
+- [x] Create `backend/api/account/delete.ts` — `requireUser` → delete Blob photos under `{userId}/`, delete Neon rows (births cascade), delete Clerk user via backend SDK; `200`
+- [x] Create `backend/api/photos/upload-url.ts` — `requireUser` → issue Blob client-upload token for pathname `{userId}/breeding/{recordId}/{timestamp}.jpg` (Phase 8 consumes this)
+- [x] (unit tests done — 21 vitest; Neon+Clerk-token integration test pending) Unit-test upload handler logic (Zod validation + op mapping) with Vitest or Jest in `backend/`; integration-test against Neon dev branch with a Clerk dev token
+- [x] Deployed to production via git push (3 build fixes: runtime spec, TS 5.9 pin, ESM .js extensions); unauthenticated 401s verified live. 200-with-token test pending a real Clerk session. Original: Deploy: `vercel deploy` (preview) → smoke-test 401 without token, 200 with token → `vercel deploy --prod`
 
 #### Agent C: PowerSync Cloud Sync
 **PRD ref:** Feature 2.3 (UX unchanged); auth via Clerk JWT, backend via Agent B's upload endpoint
@@ -544,40 +546,40 @@ Accounts/dashboards the user must create or have access to before agents can fin
 #### Agent D: RevenueCat + Tier Enforcement
 **PRD ref:** Feature 2.2, Feature 2.6
 
-- [ ] Install `react-native-purchases`
-- [ ] Create `lib/purchases.ts`:
+- [x] Install `react-native-purchases` (10.4.3)
+- [x] Create `lib/purchases.ts`: (note: v10 `Purchases.configure()` is synchronous — PRD sample is wrong; no-ops safely when platform key env is missing)
   - `initializePurchases(userId)` — configure with platform API key, `appUserID` = Clerk user id (anonymous when auth skipped)
   - `getOfferings()` — fetch current offerings
   - `purchasePackage(pkg)` — handle purchase with error cases
   - `restorePurchases()` — restore flow
   - `isPaidTier(customerInfo)` — check 'pro' entitlement
-- [ ] Update `store/useTierStore.ts`:
+- [x] Update `store/useTierStore.ts`:
   - Read entitlement from RevenueCat on launch
   - `purchaseAndUpdate()` action
   - `restoreAndUpdate()` action
-- [ ] Create `components/PaywallBottomSheet.tsx`:
+- [x] Create `components/PaywallBottomSheet.tsx`:
   - Headline: "Upgrade to [APP_NAME] Pro" (APP_NAME from constants)
   - Feature bullets, price display (annual/monthly/lifetime)
   - 7-day free trial badge on annual
   - "Start Free Trial" CTA, "Restore Purchases" link
   - "No thanks" dismiss (soft paywalls only)
-- [ ] Wire tier checks into Add form (intercept navigation if animal limit reached)
-- [ ] Add lock badges to species picker for non-goat species
-- [ ] Wire PaywallBottomSheet to all 3 paywall moments (animal limit, feature gate, contextual)
-- [ ] All error messages per PRD table (purchase errors, restore errors)
+- [x] Wire tier checks into Add form (intercept navigation if animal limit reached)
+- [x] (as "· Premium" label + tap-intercept → paywall; true badge needs a custom picker outside components/ui) Add lock badges to species picker for non-goat species
+- [~] Wired 2 of 3 paywall moments (animal limit hard, species soft); contextual weekly upsell → 7B. Wire PaywallBottomSheet to all 3 paywall moments (animal limit, feature gate, contextual)
+- [x] All error messages per PRD table (purchase errors, restore errors)
 - [ ] RevenueCat dashboard: point webhook at `POST /api/webhooks/revenuecat` with the `REVENUECAT_WEBHOOK_AUTH` header (endpoint built by Agent B)
 - [ ] Test webhook: sandbox purchase event → `users.tier` updates in Neon
 
 #### Agent E: PostHog Analytics
 **PRD ref:** Feature 2.7
 
-- [ ] Install `posthog-react-native`
-- [ ] Create `lib/analytics.ts`:
+- [x] Install `posthog-react-native` (4.57.0)
+- [x] Create `lib/analytics.ts`:
   - `initializeAnalytics(userId)` — init with API key, disable in __DEV__
   - `track(event, properties)` — capture event
   - `identifyUser(userId)` — identify after login
   - `resetAnalyticsUser()` — reset on logout/delete
-- [ ] Define `AnalyticsEvent` type union with all events from PRD table
+- [x] Define `AnalyticsEvent` type union with all events from PRD table
 - [ ] Wire init to app startup (after auth)
 - [ ] Wire identify to post-login (Clerk user id — never email)
 - [ ] Wire reset to logout and account deletion
@@ -588,18 +590,18 @@ Accounts/dashboards the user must create or have access to before agents can fin
   - notification_permission_granted/denied
   - export_triggered, photo_added, photo_removed
   - account_created, account_deleted
-- [ ] Verify no PII (animal names, notes, photos) in event properties
+- [x] Verify no PII (animal names, notes, photos) in event properties (rule enforced in module header + typed properties)
 
 #### Agent F: Expo Notifications
 **PRD ref:** Feature 2.5
 
-- [ ] Install `expo-notifications`
-- [ ] Create `lib/notifications.ts`:
+- [x] Install `expo-notifications` (55.0.25)
+- [x] Create `lib/notifications.ts`: (13 tests, 100% coverage; free-tier soonest-due helper `pickFreeTierRecord`)
   - `requestPermissions()` → boolean
   - `scheduleBreedingNotifications(record)` — schedule 4 notifications per record (7d, 3d, 1d, due date)
   - `cancelBreedingNotifications(breedingRecordId)` — cancel by identifier pattern
   - `cancelAllNotifications()`
-- [ ] Notification identifiers: `breeding-{breedingRecordId}-{daysBefore}`
+- [x] Notification identifiers: `breeding-{breedingRecordId}-{daysBefore}`
 - [ ] Notification content uses exact copy from PRD table (no emoji)
 - [ ] Schedule on record create/edit, cancel on birth log/delete
 - [ ] Free tier enforcement: only closest due date gets notification

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { format, parseISO } from 'date-fns';
 import { z } from 'zod';
@@ -18,10 +18,12 @@ import {
   PLACEHOLDER_ANIMAL_NAME,
   PLACEHOLDER_SIRE_NAME,
   PLACEHOLDER_NOTES,
+  TIER_SPECIES_PREMIUM_BADGE,
 } from '@/constants/strings';
 import { COLOR_TAGS, type ColorTagValue } from '@/constants/theme';
 import { calculateDueDate } from '@/lib/gestation';
 import { breedingFormSchema, type BreedingFormData } from '@/lib/schemas';
+import { canAccessSpecies, type Tier } from '@/lib/tierChecks';
 
 // --- Types ---
 
@@ -30,15 +32,11 @@ interface BreedingFormProps {
   onSubmit: (data: BreedingFormData) => void;
   isSubmitting?: boolean;
   submitLabel: string;
+  /** Current tier — decides which species are locked. Defaults to free. */
+  tier?: Tier;
+  /** Called when a tier-locked species is tapped, so the caller can open the paywall. */
+  onLockedSpeciesPress?: () => void;
 }
-
-// --- Species options ---
-
-const SPECIES_OPTIONS: SelectOption[] = Object.entries(SPECIES_CONFIG).map(([key, config]) => ({
-  label: config.label,
-  value: key,
-  disabled: key !== 'goat',
-}));
 
 // --- Helpers ---
 
@@ -65,7 +63,23 @@ export function BreedingForm({
   onSubmit,
   isSubmitting,
   submitLabel,
+  tier = 'free',
+  onLockedSpeciesPress,
 }: BreedingFormProps) {
+  // Locked species stay selectable so their tap can open the paywall; the badge
+  // in the label communicates the lock (the do-not-edit Select can't render one).
+  const speciesOptions: SelectOption[] = useMemo(
+    () =>
+      Object.entries(SPECIES_CONFIG).map(([key, config]) => {
+        const locked = !canAccessSpecies(key as SpeciesKey, tier);
+        return {
+          label: locked ? `${config.label} · ${TIER_SPECIES_PREMIUM_BADGE}` : config.label,
+          value: key,
+        };
+      }),
+    [tier],
+  );
+
   const defaultSpecies: SpeciesKey = initialData?.species ?? 'goat';
   const defaultGestation =
     initialData?.gestationDays ?? SPECIES_CONFIG[defaultSpecies].gestationDays;
@@ -97,6 +111,13 @@ export function BreedingForm({
   const handleSpeciesChange = useCallback(
     (newSpecies: string) => {
       const speciesKey = newSpecies as SpeciesKey;
+
+      // Tapping a tier-locked species opens the paywall and leaves selection unchanged.
+      if (!canAccessSpecies(speciesKey, tier)) {
+        onLockedSpeciesPress?.();
+        return;
+      }
+
       const newDefault = SPECIES_CONFIG[speciesKey].gestationDays;
 
       setSpecies(speciesKey);
@@ -129,7 +150,7 @@ export function BreedingForm({
         ],
       );
     },
-    [gestationDays],
+    [gestationDays, tier, onLockedSpeciesPress],
   );
 
   // --- Gestation days change handler ---
@@ -223,7 +244,7 @@ export function BreedingForm({
       <Select
         label={LABEL_SPECIES}
         value={species}
-        options={SPECIES_OPTIONS}
+        options={speciesOptions}
         onValueChange={handleSpeciesChange}
         error={errors.species}
       />

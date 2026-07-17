@@ -178,6 +178,7 @@ npx eslint . --fix               # Lint
 - `BreedingCard` is one flattened iOS accessibility element (its Pressable concatenates all card text). Match card content with substring regexes (`.*Daisy.*`), never exact text. Standalone texts (headers, sheet items, form labels) match exactly.
 - After a save, wait for the home header count (`extendedWaitUntil: visible: "N active breedings."`) before asserting — the typed name also matches the form input, and plain asserts time out during the save→navigate→refetch transition.
 - Dismiss the keyboard with an explicit `swipe` from `50%, 40%` to `50%, 15%` (form ScrollViews have `keyboardDismissMode="on-drag"`). Maestro's `hideKeyboard` is flaky on iOS; a centered swipe lands on the keyboard itself.
+- **Verify JS bundle freshness before trusting a Release E2E run.** Xcode can silently skip the "Bundle React Native code" phase and ship a stale `main.jsbundle` with fresh native code (observed after `expo prebuild --clean`). Check: `grep -c "<some string added in this change>" <DerivedData>/…/Freshen.app/main.jsbundle` — if 0, delete `main.jsbundle` from the build products and rebuild.
 
 ## Do NOT modify
 
