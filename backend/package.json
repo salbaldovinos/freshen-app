@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "description": "Freshen livestock breeding tracker — Vercel + Neon backend (Clerk auth, sync upload, RevenueCat webhook, Blob photos).",
   "scripts": {
     "test": "vitest run",
