@@ -511,8 +511,8 @@ Accounts/dashboards the user must create or have access to before agents can fin
 - [x] Create `app/welcome.tsx` — logo, APP_TAGLINE, "Get Started Free", "Sign In", "Continue without an account" (sets skipped-auth flag in AsyncStorage → home, free tier, no sync) (2026-07-17)
 - [x] Create `app/register.tsx` — `useSignUp()` **method-based flow**: email (validated on blur) + password (show/hide toggle) → email-code verification screen → finalize. Must render `<View nativeID="clerk-captcha" />` (Clerk bot protection needs the mount point). Map Clerk error codes (`form_identifier_exists`, `form_password_pwned`, `form_password_length_too_short`, verification failures) to the PRD error-copy table in `constants/strings.ts` (2026-07-17)
 - [x] Create `app/login.tsx` — `useSignIn()` **method-based flow**: `signIn.password({ identifier, password })` → `finalize()`; map `form_identifier_not_found` / `form_password_incorrect` to PRD copy; "Forgot password?" → method-based email-code reset flow (2026-07-17)
-- [ ] Session persistence across app restart and refresh on AppState foreground (Clerk SDK default behavior — verify, don't rebuild)
-- [ ] Manual test: register (real email) → verify code → land on home; kill app → still signed in; sign out → welcome
+- [x] Session persistence across app restart verified via live E2E (relaunch lands signed-in on home, token cache working)
+- [x] Live E2E (flows-live/register.yaml): register with +clerk_test email → code 424242 → home → relaunch still signed in; user verified server-side. Sign-out path still needs a manual pass.
 
 #### Agent B: Vercel Backend + Neon
 **Stack ref:** `_dev/backend-stack-decision.md` (contracts), PRD Part 2 / Feature 2.3 (cloud schema)
@@ -767,7 +767,7 @@ npx maestro test flows/          # All E2E flows pass
 - [ ] `eas init` (links EAS project id into `app.json`) and create `eas.json` with `development`, `preview`, `production` profiles
 - [ ] Set EAS env vars for production: all `EXPO_PUBLIC_*` keys from Phase 7.0 (production values — production Clerk instance, prod PowerSync URL, prod backend URL)
 - [ ] Promote Vercel backend to production domain; set production Clerk keys on it
-- [ ] Clerk: create production instance (Clerk requires a separate prod instance + domain); update PowerSync JWKS URL to prod
+- [ ] Clerk: create production instance (separate prod instance + domain); update PowerSync JWKS URL to prod; **re-enable bot protection (disabled on dev for E2E) and keep username disabled — see phase-7-account-setup.md step 1**
 - [ ] Build iOS: `eas build --platform ios --profile production`
 - [ ] Build Android: `eas build --platform android --profile production`
 
