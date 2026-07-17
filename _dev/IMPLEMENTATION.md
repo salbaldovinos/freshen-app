@@ -481,7 +481,9 @@ npx maestro test flows/          # All flows pass
 
 Accounts/dashboards the user must create or have access to before agents can finish 7A:
 
-- [ ] **Clerk** — create application "Freshen"; enable email/password with email verification code; create JWT template named `powersync` (`aud` = PowerSync instance URL, lifetime 60 min); note publishable key + secret key + JWKS URL
+- [x] **Clerk** — application "Freshen" created (`app_3GeBlreHlRJUN2oUi3chkQYhT3h`, dev instance) and linked via `clerk init`; publishable key written to `.env`, secret key moved to `backend/.env` (2026-07-17)
+- [ ] **Clerk** — verify the **Native API** is enabled: Dashboard → Native applications (required for native apps; check while creating the JWT template)
+- [ ] **Clerk** — create JWT template named `powersync` (`aud` = PowerSync instance URL, lifetime 60 min); note JWKS URL
 - [ ] **Vercel** — create project `freshen-backend` pointing at `backend/` in this repo
 - [ ] **Neon** — provision via Vercel Marketplace; enable logical replication (Neon dashboard → Settings); note `DATABASE_URL`
 - [ ] **Vercel Blob** — create store, note `BLOB_READ_WRITE_TOKEN`
@@ -498,14 +500,15 @@ Accounts/dashboards the user must create or have access to before agents can fin
 
 **Interfaces — produces:** `useAuthStore` façade: `{ isAuthenticated: boolean, userId: string | null, email: string | null, isLoading: boolean, signOut(): Promise<void>, deleteAccount(): Promise<void> }`. Components never import Clerk directly — only `app/_layout.tsx` (provider) and `store/useAuthStore.ts` touch Clerk APIs.
 
-- [ ] Install `@clerk/clerk-expo` and `expo-secure-store` (remember `--legacy-peer-deps`)
-- [ ] Create `lib/secureStorage.ts` — expo-secure-store wrapper (get/set/delete)
-- [ ] Create `lib/clerk.ts` — Clerk `tokenCache` backed by `lib/secureStorage.ts`
-- [ ] Update `app/_layout.tsx` — wrap root in `<ClerkProvider publishableKey={...} tokenCache={...}>`; auth guard: no session AND no "skipped auth" flag → redirect to `/welcome`
+> **API note (2026-07-17):** installed SDK is `@clerk/expo` v3.7 (package renamed from `@clerk/clerk-expo`). Use the **current method-based custom-flows API only** — `useSignIn()`/`useSignUp()` return `{ signIn/signUp, errors, fetchStatus }` with methods like `signIn.password()` and `finalize()`. The legacy `create()` → `prepare…()` → `attempt…()` → `setActive()` pattern lives at `@clerk/expo/legacy` and must not be used for new code. Before writing flows, consult the local `clerk-expo` skill (`references/custom-flows.md`) and verify signatures against `node_modules/@clerk/expo/dist/*.d.ts`.
+
+- [x] Install `@clerk/expo` and `expo-secure-store`; add `"@clerk/expo"` + `"expo-secure-store"` to `app.json` plugins (done via `clerk init` + `expo install`, 2026-07-17)
+- [x] Update `app/_layout.tsx` — root wrapped in `<ClerkProvider publishableKey={…} tokenCache={tokenCache}>` with `tokenCache` imported from `@clerk/expo/token-cache` (never a hand-rolled secure-store cache) (2026-07-17)
+- [ ] Add auth guard to `app/_layout.tsx`: no session AND no "skipped auth" flag → redirect to `/welcome` (do this together with the welcome screen, not before)
 - [ ] Update `store/useAuthStore.ts` — façade over Clerk's `useAuth`/`useUser` per the interface above; `deleteAccount()` → `POST ${EXPO_PUBLIC_BACKEND_URL}/api/account/delete` with bearer token, then Clerk `signOut()`
 - [ ] Create `app/welcome.tsx` — logo, APP_TAGLINE, "Get Started Free", "Sign In", "Continue without an account" (sets skipped-auth flag in AsyncStorage → home, free tier, no sync)
-- [ ] Create `app/register.tsx` — `useSignUp()`: email (validated on blur) + password (show/hide toggle) → `create()` → `prepareEmailAddressVerification()` → 6-digit code screen → `attemptEmailAddressVerification()` → `setActive()`. Map Clerk error codes (`form_identifier_exists`, `form_password_pwned`, `form_password_length_too_short`, verification failures) to the PRD error-copy table in `constants/strings.ts`
-- [ ] Create `app/login.tsx` — `useSignIn()`: email + password → `create()` → `setActive()`; map `form_identifier_not_found` / `form_password_incorrect` to PRD copy; "Forgot password?" → Clerk reset-code flow (`create({ strategy: 'reset_password_email_code' })`)
+- [ ] Create `app/register.tsx` — `useSignUp()` **method-based flow**: email (validated on blur) + password (show/hide toggle) → email-code verification screen → finalize. Must render `<View nativeID="clerk-captcha" />` (Clerk bot protection needs the mount point). Map Clerk error codes (`form_identifier_exists`, `form_password_pwned`, `form_password_length_too_short`, verification failures) to the PRD error-copy table in `constants/strings.ts`
+- [ ] Create `app/login.tsx` — `useSignIn()` **method-based flow**: `signIn.password({ identifier, password })` → `finalize()`; map `form_identifier_not_found` / `form_password_incorrect` to PRD copy; "Forgot password?" → method-based email-code reset flow
 - [ ] Session persistence across app restart and refresh on AppState foreground (Clerk SDK default behavior — verify, don't rebuild)
 - [ ] Manual test: register (real email) → verify code → land on home; kill app → still signed in; sign out → welcome
 
