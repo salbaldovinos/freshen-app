@@ -10,41 +10,53 @@ appId: com.freshenapp.freshen
 - waitForAnimationToEnd
 - tapOn: "e.g. Daisy"
 - inputText: "Clover"
-- hideKeyboard
+- swipe:
+    start: 50%, 40%
+    end: 50%, 15%
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN
 - tapOn: "Save"
-- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "1 active breeding."
+    timeout: 10000
 
 # Add second record: "Daisy"
 - tapOn: "+"
 - waitForAnimationToEnd
 - tapOn: "e.g. Daisy"
 - inputText: "Daisy"
-- hideKeyboard
+- swipe:
+    start: 50%, 40%
+    end: 50%, 15%
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN
 - tapOn: "Save"
-- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "2 active breedings."
+    timeout: 10000
 
 # Add third record: "Amber"
 - tapOn: "+"
 - waitForAnimationToEnd
 - tapOn: "e.g. Daisy"
 - inputText: "Amber"
-- hideKeyboard
+- swipe:
+    start: 50%, 40%
+    end: 50%, 15%
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN
 - tapOn: "Save"
-- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "3 active breedings."
+    timeout: 10000
 
 # Verify all three records are visible
-- assertVisible: "Clover"
-- assertVisible: "Daisy"
-- assertVisible: "Amber"
+- assertVisible: ".*Amber.*"
+- assertVisible: ".*Clover.*"
+- assertVisible: ".*Daisy.*"
 
 # Tap the Sort button to open the sort sheet
 - tapOn: "Sort"
@@ -55,6 +67,6 @@ appId: com.freshenapp.freshen
 - waitForAnimationToEnd
 
 # Verify all records are still visible (order is visual, just confirm they exist)
-- assertVisible: "Amber"
-- assertVisible: "Clover"
-- assertVisible: "Daisy"
+- assertVisible: ".*Amber.*"
+- assertVisible: ".*Clover.*"
+- assertVisible: ".*Daisy.*"

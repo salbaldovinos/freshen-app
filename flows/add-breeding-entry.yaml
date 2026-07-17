@@ -27,17 +27,23 @@ appId: com.freshenapp.freshen
 
 # Species defaults to Goat, gestation defaults to 150 — no need to change
 
-# Dismiss the keyboard so the Save button is reachable
-- hideKeyboard
-
 # Scroll down to the Save button and tap it
+- swipe:
+    start: 50%, 40%
+    end: 50%, 15%
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN
 - tapOn: "Save"
 - waitForAnimationToEnd
 
-# Verify the card appears on the home screen (sire renders as "× Thunder")
-- assertVisible: "Daisy"
-- assertVisible: "× Thunder"
-- assertVisible: "BRED"
+# Wait for the settled home screen — the count header exists only there
+# (the typed name also matches the form input, so it can't be the wait target)
+- extendedWaitUntil:
+    visible: "1 active breeding."
+    timeout: 10000
+
+# Verify the card (sire renders as "× Thunder")
+- assertVisible: ".*Daisy.*"
+- assertVisible: ".*Thunder.*"
+- assertVisible: ".*BRED.*"

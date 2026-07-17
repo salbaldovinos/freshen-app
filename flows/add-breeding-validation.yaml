@@ -16,6 +16,9 @@ appId: com.freshenapp.freshen
 # Pairing date is pre-filled with today's date, so only animal name will error
 
 # Scroll to Save and tap without filling required fields
+- swipe:
+    start: 50%, 40%
+    end: 50%, 15%
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN

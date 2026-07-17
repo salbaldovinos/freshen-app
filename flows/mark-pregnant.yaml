@@ -12,19 +12,24 @@ appId: com.freshenapp.freshen
 - inputText: "Buttercup"
 - tapOn: "e.g. Buck (optional)"
 - inputText: "Rocky"
-- hideKeyboard
+- swipe:
+    start: 50%, 40%
+    end: 50%, 15%
 - scrollUntilVisible:
     element: "Save"
     direction: DOWN
 - tapOn: "Save"
 - waitForAnimationToEnd
 
-# Verify the card is visible on the home screen
-- assertVisible: "Buttercup"
-- assertVisible: "BRED"
+# Wait for the settled home screen — the count header exists only there
+- extendedWaitUntil:
+    visible: "1 active breeding."
+    timeout: 10000
+- assertVisible: ".*Buttercup.*"
+- assertVisible: ".*BRED.*"
 
 # Long press on the card to open the action sheet
-- longPressOn: "Buttercup"
+- longPressOn: ".*Buttercup.*"
 - waitForAnimationToEnd
 
 # Tap "Mark pregnant" from the action sheet
@@ -32,7 +37,7 @@ appId: com.freshenapp.freshen
 - waitForAnimationToEnd
 
 # Verify the badge changed to PREGNANT
-- assertVisible: "PREGNANT"
+- assertVisible: ".*PREGNANT.*"
 
 # Verify the toast message appeared
 - assertVisible: "Pregnancy confirmed for Buttercup."

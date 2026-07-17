@@ -13,8 +13,12 @@ export interface SheetProps {
 export function Sheet({ visible, onClose, title, children, className }: SheetProps) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable className="flex-1 bg-black/40 justify-end" onPress={onClose}>
+      {/* Wrapper pressables are not semantic buttons — without accessible={false},
+          iOS flattens the whole sheet into one element, hiding items from
+          VoiceOver and UI tests. */}
+      <Pressable accessible={false} className="flex-1 bg-black/40 justify-end" onPress={onClose}>
         <Pressable
+          accessible={false}
           className={cn('bg-white rounded-t-xl', className)}
           onPress={(e) => e.stopPropagation()}
         >

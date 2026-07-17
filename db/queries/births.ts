@@ -1,4 +1,5 @@
 import { desc, eq } from 'drizzle-orm';
+import * as Crypto from 'expo-crypto';
 
 import { db } from '@/db/client';
 import { births, type Birth, type NewBirth } from '@/db/schema';
@@ -19,7 +20,7 @@ export async function getBirthsByBreedingId(breedingRecordId: string): Promise<B
  */
 export async function createBirth(data: Omit<NewBirth, 'id' | 'createdAt'>): Promise<Birth> {
   const now = new Date().toISOString();
-  const id = crypto.randomUUID();
+  const id = Crypto.randomUUID();
   const results = await db
     .insert(births)
     .values({
