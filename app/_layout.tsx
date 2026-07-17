@@ -1,5 +1,7 @@
 import '../global.css';
 
+import { ClerkProvider } from '@clerk/expo';
+import { tokenCache } from '@clerk/expo/token-cache';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -20,6 +22,12 @@ export const unstable_settings = {
 };
 
 SplashScreen.preventAutoHideAsync();
+
+const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+
+if (!clerkPublishableKey) {
+  throw new Error('Add EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY to the .env file');
+}
 
 const navTheme = {
   ...DefaultTheme,
@@ -74,7 +82,11 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
+      <RootLayoutNav />
+    </ClerkProvider>
+  );
 }
 
 function GlobalToast() {

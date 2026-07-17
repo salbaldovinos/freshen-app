@@ -41,7 +41,7 @@ The app name, tagline, bundle ID, and Store metadata are isolated in `constants/
 - react-native-reusables (shadcn/ui port — copy-paste components)
 - Drizzle ORM + expo-sqlite (local database, all tiers)
 - date-fns (all date math — required, no raw Date arithmetic)
-- Clerk (`@clerk/clerk-expo`) — authentication (replaces Supabase Auth; see `_dev/backend-stack-decision.md`)
+- Clerk (`@clerk/expo` v3) — authentication (replaces Supabase Auth; see `_dev/backend-stack-decision.md`). Token cache comes from `@clerk/expo/token-cache` (never hand-rolled). Custom flows use the current method-based `useSignIn`/`useSignUp` API — the legacy `create/prepare/attempt/setActive` pattern (`@clerk/expo/legacy`) is banned. Consult the local `clerk-expo` skill before writing auth code.
 - Vercel backend — Neon Postgres (PowerSync source), Vercel Functions in `backend/`, Vercel Blob for photos (paid tier only)
 - PowerSync React Native SDK (offline sync — paid tier only; Clerk JWTs via JWKS)
 - RevenueCat SDK (in-app purchases)
@@ -86,7 +86,6 @@ lib/
   tierChecks.ts          # canAddAnimal, canEnableNotification, canSyncToCloud, canUploadPhoto, canExportData, canAccessSpecies
   analytics.ts           # PostHog wrapper — track(), identifyUser(), resetAnalyticsUser()
   sync.ts                # PowerSync init (paid tier only) — Clerk token via fetchCredentials, uploads to backend /api/sync/upload
-  clerk.ts               # Clerk tokenCache (expo-secure-store)
   purchases.ts           # RevenueCat helpers
   notifications.ts       # Expo notifications helpers
   secureStorage.ts       # expo-secure-store wrapper

@@ -8,7 +8,9 @@ Everything here is on free tiers. No Apple/Google developer accounts needed yet 
 
 ---
 
-## 1. Clerk — application + keys [YOU]
+## 1. Clerk — application + keys [DONE 2026-07-17]
+
+Completed via `clerk init`: app `Freshen` (`app_3GeBlreHlRJUN2oUi3chkQYhT3h`), publishable key in `.env`, secret key in `backend/.env`. Remaining Clerk work is step 6 (JWT template) plus one check: **Dashboard → Native applications → confirm the Native API is enabled.** Original steps kept for reference:
 
 1. Go to https://clerk.com → sign up (GitHub login is fine) → **Create application**.
 2. Name: `Freshen`. Sign-in options: enable **Email** only (leave Google/Apple off for v1).
