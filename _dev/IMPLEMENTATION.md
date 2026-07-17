@@ -6,16 +6,23 @@
 **Backend stack:** `_dev/backend-stack-decision.md` — **Clerk + Vercel (Neon, Functions, Blob) replaces Supabase** as of v2.0. Where this plan and the PRD name Supabase, the stack-decision doc governs.
 **Status:** In Progress
 
-## Status snapshot (2026-07-17)
+## Status snapshot (2026-07-17, end of day)
 
-- Phases 0–5 complete. Gate checks verified: `tsc` clean, 68/68 Jest tests, 100% coverage on `lib/`.
-- Phase 4 leftovers: 3 component test files unwritten (tasks below).
-- Phase 5 leftover: manual MVP acceptance walkthrough never run (needs `npx expo run:ios`).
-- Phase 6 partial: 5 Maestro flows written, Maestro not installed, flows never run.
-- Phases 7–10 not started. Phase 7+ rewritten for the Clerk + Vercel stack.
-- Repo lives at https://github.com/salbaldovinos/freshen-app (first commit 2026-07-17).
+- **Phases 0–6 complete and verified.** 97 Jest tests, `tsc` + `eslint` clean, all 5 Maestro flows pass (twice consecutively) on iPhone 17 Pro simulator, iOS 26.5, **Release** configuration. Merged to main at `c477bde`.
+- Backend stack is Clerk + Vercel (`_dev/backend-stack-decision.md`). `backend/` scaffold committed with 21 passing unit tests — **not deployed** (blocked on Phase 7.0 accounts). Covers Phase 7A Agent B's code tasks; deploy + Neon schema push remain.
+- Release-only app bugs found by E2E and fixed: missing `expo-crypto` (every insert failed in release builds — dev builds masked it), Sheet wrapper Pressables flattening iOS accessibility (VoiceOver/tests couldn't reach sheet items), raw Zod copy instead of PRD copy on offspring `max(20)`.
+- Toolchain constraints discovered (also recorded in CLAUDE.md): jest pinned to `~29.7.0` (jest-expo 55 breaks under jest 30); Maestro needs a Java runtime (`brew install openjdk`); E2E must target a Release build — dev-client builds break `launchApp: clearState`.
 
-**Execution order from here:** Phase 4/5 leftovers → Phase 6 → Phase 7 external setup → Phase 7A/7B → Phase 8 → Phase 9 → Phase 10.
+**What's left before store submission (in order):**
+
+1. **Phase 6 remainder:** run the flow suite on an Android emulator; fix platform-specific issues.
+2. **E2E coverage gaps** (fold into Phase 9): detail screen, edit/delete, archive/unarchive, overdue banner, sort persistence across restart, "Breeding record saved." toast.
+3. **Open PRD question (product decision needed):** `birthFormSchema` rejects stillborn-only births — the ≥1-offspring rule sums does + bucks only. Decide whether stillborn-only litters are loggable.
+4. **Phase 7.0 (requires the user):** create Clerk, Vercel, Neon, PowerSync, RevenueCat, and PostHog accounts; set env vars per the 7.0 checklist.
+5. **Phase 7A/7B:** six integration agents + wiring (Agent B's code exists; needs deploy, Neon push, webhook pointing).
+6. **Phase 8:** photo uploads (Vercel Blob) + CSV/PDF export.
+7. **Phase 9:** full integration QA on both platforms, edge cases, performance checks.
+8. **Phase 10:** store accounts, EAS builds, listings/privacy labels, TestFlight/Play test tracks, review.
 
 ---
 
@@ -421,18 +428,18 @@ npx expo start                   # Full MVP walkthrough
 ```
 
 **MVP acceptance test (manual walkthrough):**
-- [ ] Fresh install → empty state
-- [ ] Add breeding record → appears in list sorted by due date
+- [x] Fresh install → empty state (E2E + screenshot, Release build)
+- [x] Add breeding record → appears in list (E2E)
 - [ ] Edit record → changes reflected
-- [ ] Mark pregnant → status changes
-- [ ] Log birth → status changes to Birth Logged
+- [x] Mark pregnant → status changes (E2E incl. toast copy)
+- [x] Log birth → status changes to Birth Logged (E2E)
 - [ ] Archive record → moves below active records
 - [ ] Delete record → removed from list
-- [ ] Sort by all 5 options → order changes correctly
+- [~] Sort options: A–Z verified via E2E; other 4 options + persistence unverified
 - [ ] Pull-to-refresh → list refreshes
-- [ ] All 5 status badge states render correctly
-- [ ] All form validation errors show exact PRD copy
-- [ ] All toast messages match PRD copy
+- [~] Status badges: bred/pregnant/birth-logged verified live; overdue/archived via component tests only
+- [x] Form validation errors show exact PRD copy (animal name verified in UI; all messages unit-tested)
+- [~] Toasts: pregnancy-confirmed toast verified in UI; others unit-level only
 - [ ] Settings screen renders with about section
 - [ ] App works fully offline (no network calls in MVP)
 
