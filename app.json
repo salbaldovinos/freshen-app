@@ -34,7 +34,8 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "@clerk/expo"
+      "@clerk/expo",
+      "@journeyapps/react-native-quick-sqlite"
     ],
     "experiments": {
       "typedRoutes": true
