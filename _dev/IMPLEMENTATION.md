@@ -1,9 +1,21 @@
 # Freshen — Implementation Plan
 
-**Version:** 1.0 | **Created:** 2026-03-18
+**Version:** 2.0 | **Created:** 2026-03-18 | **Revised:** 2026-07-17
 **Source PRD:** `_discovery/livestock-breeding-tracker-PRD-v1.2.md`
 **Design System:** `_discovery/kindled-design-system-branding.md`
+**Backend stack:** `_dev/backend-stack-decision.md` — **Clerk + Vercel (Neon, Functions, Blob) replaces Supabase** as of v2.0. Where this plan and the PRD name Supabase, the stack-decision doc governs.
 **Status:** In Progress
+
+## Status snapshot (2026-07-17)
+
+- Phases 0–5 complete. Gate checks verified: `tsc` clean, 68/68 Jest tests, 100% coverage on `lib/`.
+- Phase 4 leftovers: 3 component test files unwritten (tasks below).
+- Phase 5 leftover: manual MVP acceptance walkthrough never run (needs `npx expo run:ios`).
+- Phase 6 partial: 5 Maestro flows written, Maestro not installed, flows never run.
+- Phases 7–10 not started. Phase 7+ rewritten for the Clerk + Vercel stack.
+- Repo lives at https://github.com/salbaldovinos/freshen-app (first commit 2026-07-17).
+
+**Execution order from here:** Phase 4/5 leftovers → Phase 6 → Phase 7 external setup → Phase 7A/7B → Phase 8 → Phase 9 → Phase 10.
 
 ---
 
@@ -233,7 +245,7 @@ npx tsc --noEmit        # Must pass — queries type-check against schema
 - [x] Create `store/useAuthStore.ts`:
   - State: `session`, `user`, `isLoading`, `isAuthenticated`
   - Actions: `initialize()`, `signIn()`, `signUp()`, `signOut()`, `refreshSession()`
-  - For MVP: unauthenticated mode only — Supabase integration comes in Phase 7
+  - For MVP: unauthenticated mode only — auth integration (Clerk) comes in Phase 7
 
 **Gate check:**
 ```bash
@@ -261,8 +273,8 @@ npx tsc --noEmit        # Must pass
   - Long-press → action sheet with: Edit Entry, Mark Pregnant (conditional), Log Birth, Archive (conditional), Delete
   - Uses `GestationBadge` for status
   - Uses Cormorant for animal name, DM Sans for labels
-- [ ] Write `tests/components/BreedingCard.test.tsx` — all 5 status states render correctly, overdue banner shows/hides
-- [ ] Write `tests/components/GestationBadge.test.tsx` — correct color/text per status
+- [ ] Write `tests/components/BreedingCard.test.tsx` — render with a fixture record per status (`bred`, `pregnant`, `overdue`, `birth_logged`, `archived`); assert badge label text per status; assert "OVERDUE" banner text present only for `overdue`; assert "× [sire]" when sire set and "Sire unknown" when null. Assert on rendered text and `testID`s, not computed NativeWind styles (class → style resolution is unreliable under jest-expo).
+- [ ] Write `tests/components/GestationBadge.test.tsx` — one render per status; assert label text ("Bred", "Pregnant", "Overdue", "Birth logged", "Archived" per `constants/strings.ts`) and `testID={'badge-' + status}` (add the testID to the component if missing)
 
 #### Agent B: Home Screen (Breeding List)
 **PRD ref:** Feature 1.1
@@ -296,7 +308,7 @@ npx tsc --noEmit        # Must pass
   - **Edit mode:** title "Edit Breeding", pre-populated fields, "Save Changes" button
   - Save → write to SQLite via breeding store, navigate back, toast "Breeding record saved."
   - Delete (edit mode only) → confirmation dialog → delete → navigate back → toast "Record deleted."
-- [ ] Write `tests/components/BreedingForm.test.tsx` — validation errors render on bad data
+- [ ] Write `tests/components/BreedingForm.test.tsx` — submit empty form → "Animal name is required." renders; animal name of 51 chars → "Animal name must be 50 characters or less."; notes field shows live character counter ("N/500"); valid submit calls the `onSubmit` prop with parsed `BreedingFormData` (mock the store/navigation, exact error copy from `lib/schemas.ts`)
 
 ### Wave 4B — Detail + Birth Screens (Parallelizable — 2 agents)
 
@@ -432,14 +444,15 @@ npx expo start                   # Full MVP walkthrough
 
 **Agent assignment:** Single agent
 
-- [ ] Install Maestro CLI
+- [ ] Install Maestro CLI: `curl -fsSL "https://get.maestro.mobile.dev" | bash`, then verify `maestro --version`
 - [x] Create `flows/add-breeding-entry.yaml` — happy path: launch → empty state → tap + → fill form → save → verify card
 - [x] Create `flows/add-breeding-validation.yaml` — submit empty form → verify error messages
 - [x] Create `flows/mark-pregnant.yaml` — long press → mark pregnant → verify badge change
 - [x] Create `flows/log-birth.yaml` — long press → log birth → verify status change
 - [x] Create `flows/sort-records.yaml` — change sort order → verify list reorders
-- [ ] Run all flows on iOS simulator: `npx maestro test flows/`
-- [ ] Run all flows on Android emulator: `npx maestro test flows/`
+- [ ] Build a dev client first (`npx expo run:ios`) — Maestro drives the installed app, `appId: com.freshenapp.freshen`
+- [ ] Run all flows on iOS simulator: `maestro test flows/` (fix flow YAMLs if selectors drifted from implemented UI — flows were written before ever being run)
+- [ ] Run all flows on Android emulator (`npx expo run:android`, then `maestro test flows/`)
 - [ ] Fix any platform-specific issues
 
 **Gate check:**
@@ -451,44 +464,77 @@ npx maestro test flows/          # All flows pass
 
 ## Phase 7 — v1.0 Backend + Integrations (Mixed Parallelism)
 
-> **Strategy:** Auth, RevenueCat, PowerSync, PostHog, and Notifications are largely independent integrations. Build them in parallel, then wire them together.
+> **Strategy:** Client auth (Clerk), the Vercel backend, PowerSync, RevenueCat, PostHog, and Notifications are largely independent. Build them in parallel against the contracts in `_dev/backend-stack-decision.md`, then wire together in 7B.
+>
+> **Stack note (v2.0):** This phase was rewritten for Clerk + Vercel. Where the PRD says "Supabase Auth" read Clerk; where it says "Edge Function" read Vercel Function; where it says "Supabase Storage" read Vercel Blob. PRD UX, copy, and acceptance criteria still apply verbatim.
 
-### Wave 7A — Independent Integrations (Parallelizable — 5 agents)
+### 7.0 — External account setup (user + agent together, blocking for 7A)
 
-#### Agent A: Supabase Auth
-**PRD ref:** Feature 2.1
+Accounts/dashboards the user must create or have access to before agents can finish 7A:
 
-- [ ] Install `@supabase/supabase-js` and `expo-secure-store`
-- [ ] Create `lib/supabase.ts` — Supabase client with secure storage adapter
-- [ ] Create `lib/secureStorage.ts` — expo-secure-store wrapper
-- [ ] Update `store/useAuthStore.ts` — real auth state management:
-  - `signUp(email, password)` → Supabase `signUp()`
-  - `signIn(email, password)` → Supabase `signInWithPassword()`
-  - `signOut()` → clear session
-  - `refreshSession()` → silent refresh on app resume
-  - `deleteAccount()` → calls Edge Function
-- [ ] Create `app/welcome.tsx`:
-  - Logo, tagline, "Get Started Free", "Sign In", "Continue without an account"
-- [ ] Create `app/register.tsx`:
-  - Email input (validated on blur), password input (show/hide, strength indicator)
-  - "Create Account" → loading → verification pending screen
-  - All error messages per PRD table
-- [ ] Create `app/login.tsx`:
-  - Email + password, "Sign In" button
-  - All error messages per PRD table
-- [ ] Update `app/_layout.tsx`:
-  - Auth guard: check session → redirect to welcome if none
-  - Session refresh on AppState change
-- [ ] Wire "Continue without an account" → skip to home (free tier, no sync)
-- [ ] Create Supabase Edge Function for account deletion (`deleteUser()` with service role)
-- [ ] Test Edge Function: account + all associated data removed from Supabase
+- [ ] **Clerk** — create application "Freshen"; enable email/password with email verification code; create JWT template named `powersync` (`aud` = PowerSync instance URL, lifetime 60 min); note publishable key + secret key + JWKS URL
+- [ ] **Vercel** — create project `freshen-backend` pointing at `backend/` in this repo
+- [ ] **Neon** — provision via Vercel Marketplace; enable logical replication (Neon dashboard → Settings); note `DATABASE_URL`
+- [ ] **Vercel Blob** — create store, note `BLOB_READ_WRITE_TOKEN`
+- [ ] **PowerSync Cloud** — create instance; note instance URL (needed for Clerk JWT template `aud`)
+- [ ] **RevenueCat** — create project; create `pro` entitlement; products: annual (w/ 7-day trial), monthly, lifetime. Requires App Store Connect + Play Console in-app products (depends on Phase 10 store accounts — can stub with sandbox until then)
+- [ ] **PostHog** — create project, note API key
+- [ ] Create `.env` (gitignored) with: `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, `EXPO_PUBLIC_POWERSYNC_URL`, `EXPO_PUBLIC_BACKEND_URL`, `EXPO_PUBLIC_POSTHOG_API_KEY`, `EXPO_PUBLIC_REVENUECAT_IOS_KEY`, `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`
+- [ ] Set Vercel env vars on `freshen-backend`: `CLERK_SECRET_KEY`, `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN`, `REVENUECAT_WEBHOOK_AUTH`
 
-#### Agent B: RevenueCat + Tier Enforcement
+### Wave 7A — Independent Integrations (Parallelizable — 6 agents)
+
+#### Agent A: Clerk Auth (client)
+**PRD ref:** Feature 2.1 (UX/copy/acceptance criteria unchanged; provider is Clerk)
+
+**Interfaces — produces:** `useAuthStore` façade: `{ isAuthenticated: boolean, userId: string | null, email: string | null, isLoading: boolean, signOut(): Promise<void>, deleteAccount(): Promise<void> }`. Components never import Clerk directly — only `app/_layout.tsx` (provider) and `store/useAuthStore.ts` touch Clerk APIs.
+
+- [ ] Install `@clerk/clerk-expo` and `expo-secure-store` (remember `--legacy-peer-deps`)
+- [ ] Create `lib/secureStorage.ts` — expo-secure-store wrapper (get/set/delete)
+- [ ] Create `lib/clerk.ts` — Clerk `tokenCache` backed by `lib/secureStorage.ts`
+- [ ] Update `app/_layout.tsx` — wrap root in `<ClerkProvider publishableKey={...} tokenCache={...}>`; auth guard: no session AND no "skipped auth" flag → redirect to `/welcome`
+- [ ] Update `store/useAuthStore.ts` — façade over Clerk's `useAuth`/`useUser` per the interface above; `deleteAccount()` → `POST ${EXPO_PUBLIC_BACKEND_URL}/api/account/delete` with bearer token, then Clerk `signOut()`
+- [ ] Create `app/welcome.tsx` — logo, APP_TAGLINE, "Get Started Free", "Sign In", "Continue without an account" (sets skipped-auth flag in AsyncStorage → home, free tier, no sync)
+- [ ] Create `app/register.tsx` — `useSignUp()`: email (validated on blur) + password (show/hide toggle) → `create()` → `prepareEmailAddressVerification()` → 6-digit code screen → `attemptEmailAddressVerification()` → `setActive()`. Map Clerk error codes (`form_identifier_exists`, `form_password_pwned`, `form_password_length_too_short`, verification failures) to the PRD error-copy table in `constants/strings.ts`
+- [ ] Create `app/login.tsx` — `useSignIn()`: email + password → `create()` → `setActive()`; map `form_identifier_not_found` / `form_password_incorrect` to PRD copy; "Forgot password?" → Clerk reset-code flow (`create({ strategy: 'reset_password_email_code' })`)
+- [ ] Session persistence across app restart and refresh on AppState foreground (Clerk SDK default behavior — verify, don't rebuild)
+- [ ] Manual test: register (real email) → verify code → land on home; kill app → still signed in; sign out → welcome
+
+#### Agent B: Vercel Backend + Neon
+**Stack ref:** `_dev/backend-stack-decision.md` (contracts), PRD Part 2 / Feature 2.3 (cloud schema)
+
+**Interfaces — produces:** the four endpoints below at `EXPO_PUBLIC_BACKEND_URL`. All except the webhook require `Authorization: Bearer <Clerk JWT>`; all writes scoped to the token's `sub`, never a client-supplied user id.
+
+- [ ] Create `backend/` — standalone `package.json` (TypeScript, `@clerk/backend`, `drizzle-orm`, `@neondatabase/serverless`, `@vercel/blob`, `zod`), `vercel.json`, deployed as Vercel project `freshen-backend`
+- [ ] Create `backend/db/schema.ts` — Drizzle **Postgres** schema: `users` (id = Clerk user id, email, tier, created_at), `breeding_records`, `births` — column parity with mobile `db/schema.ts` plus `user_id` FK on both record tables
+- [ ] Push schema to Neon: `npx drizzle-kit push` (backend config); confirm logical replication enabled
+- [ ] Create `backend/lib/auth.ts` — `requireUser(req): Promise<string>` — verify bearer JWT via `@clerk/backend` `verifyToken()`, return `sub`; throw 401 otherwise
+- [ ] Create `backend/api/sync/upload.ts` — validate body with Zod against the batch contract (`op: PUT|PATCH|DELETE`, `table: breeding_records|births`, `id`, `data`); apply to Neon in a transaction; upsert for PUT, partial update for PATCH, delete for DELETE; force `user_id = sub`; `200 {}` / `400` / `401`
+- [ ] Create `backend/api/webhooks/revenuecat.ts` — check `Authorization` header equals `REVENUECAT_WEBHOOK_AUTH`; on `INITIAL_PURCHASE`/`RENEWAL`/`UNCANCELLATION` set `users.tier = 'paid'`, on `EXPIRATION` set `'free'` (key by `app_user_id` = Clerk user id)
+- [ ] Create `backend/api/account/delete.ts` — `requireUser` → delete Blob photos under `{userId}/`, delete Neon rows (births cascade), delete Clerk user via backend SDK; `200`
+- [ ] Create `backend/api/photos/upload-url.ts` — `requireUser` → issue Blob client-upload token for pathname `{userId}/breeding/{recordId}/{timestamp}.jpg` (Phase 8 consumes this)
+- [ ] Unit-test upload handler logic (Zod validation + op mapping) with Vitest or Jest in `backend/`; integration-test against Neon dev branch with a Clerk dev token
+- [ ] Deploy: `vercel deploy` (preview) → smoke-test 401 without token, 200 with token → `vercel deploy --prod`
+
+#### Agent C: PowerSync Cloud Sync
+**PRD ref:** Feature 2.3 (UX unchanged); auth via Clerk JWT, backend via Agent B's upload endpoint
+
+**Interfaces — consumes:** Clerk `getToken({ template: 'powersync' })`; `POST /api/sync/upload` (Agent B). **Produces:** `lib/sync.ts`: `initSync(userId): Promise<void>`, `teardownSync(): Promise<void>`, `useSyncStatus(): 'synced' | 'syncing' | 'offline'`.
+
+- [ ] Install `@powersync/react-native` (+ peer deps; `--legacy-peer-deps`)
+- [ ] Create `db/powersync-schema.ts` — PowerSync schema mirroring `breeding_records` + `births`
+- [ ] Create `lib/sync.ts` — PowerSync init gated on paid + authenticated; `fetchCredentials()` returns `{ endpoint: EXPO_PUBLIC_POWERSYNC_URL, token: await getToken({ template: 'powersync' }) }`; `uploadData()` drains `getCrudBatch()` → maps CrudEntry ops to the upload contract → POST → `complete()` on 200, throw on failure (PowerSync retries)
+- [ ] PowerSync dashboard: connect Neon as source; set auth to Clerk JWKS URL; sync rules — one bucket per user: `SELECT * FROM breeding_records WHERE user_id = request.user_id()`, same for `births`
+- [ ] Create `components/breeding/StatusIndicator.tsx` — synced (cloud + check, green) / syncing (cloud + arrows, blue, animated) / offline (cloud + slash, gray); tap → bottom sheet with last-sync time
+- [ ] Add StatusIndicator to home header (paid tier only); free tier: PowerSync never initialized
+- [ ] Manual test: paid+authed on two simulators → record created on A appears on B; airplane-mode edit on A syncs after reconnect
+
+#### Agent D: RevenueCat + Tier Enforcement
 **PRD ref:** Feature 2.2, Feature 2.6
 
 - [ ] Install `react-native-purchases`
 - [ ] Create `lib/purchases.ts`:
-  - `initializePurchases(userId)` — configure with platform API key
+  - `initializePurchases(userId)` — configure with platform API key, `appUserID` = Clerk user id (anonymous when auth skipped)
   - `getOfferings()` — fetch current offerings
   - `purchasePackage(pkg)` — handle purchase with error cases
   - `restorePurchases()` — restore flow
@@ -498,7 +544,7 @@ npx maestro test flows/          # All flows pass
   - `purchaseAndUpdate()` action
   - `restoreAndUpdate()` action
 - [ ] Create `components/PaywallBottomSheet.tsx`:
-  - Headline: "Upgrade to Freshen Pro" (use APP_NAME from constants)
+  - Headline: "Upgrade to [APP_NAME] Pro" (APP_NAME from constants)
   - Feature bullets, price display (annual/monthly/lifetime)
   - 7-day free trial badge on annual
   - "Start Free Trial" CTA, "Restore Purchases" link
@@ -507,30 +553,10 @@ npx maestro test flows/          # All flows pass
 - [ ] Add lock badges to species picker for non-goat species
 - [ ] Wire PaywallBottomSheet to all 3 paywall moments (animal limit, feature gate, contextual)
 - [ ] All error messages per PRD table (purchase errors, restore errors)
-- [ ] Create Supabase Edge Function for RevenueCat webhook → updates `users.tier` column on purchase events
-- [ ] Test webhook: purchase event → tier updates server-side
+- [ ] RevenueCat dashboard: point webhook at `POST /api/webhooks/revenuecat` with the `REVENUECAT_WEBHOOK_AUTH` header (endpoint built by Agent B)
+- [ ] Test webhook: sandbox purchase event → `users.tier` updates in Neon
 
-#### Agent C: PowerSync Cloud Sync
-**PRD ref:** Feature 2.3
-
-- [ ] Install `@powersync/react-native` and `@powersync/attachments`
-- [ ] Create `db/powersync-schema.ts` — mirrors SQLite schema for PowerSync
-- [ ] Create `lib/sync.ts`:
-  - PowerSync database initialization (only for paid + authenticated)
-  - Sync status monitoring: connected, connecting, disconnected, syncing
-  - Connection/disconnection lifecycle
-- [ ] Create `components/breeding/StatusIndicator.tsx`:
-  - Cloud + checkmark (green): synced
-  - Cloud + arrows (blue, animated): syncing
-  - Cloud + slash (gray): offline
-  - Tap → bottom sheet with last sync time
-- [ ] Add StatusIndicator to home screen header (only for paid tier)
-- [ ] Conditional: skip PowerSync init entirely for free-tier users
-- [ ] Create Supabase SQL schema: `breeding_records` and `births` tables with RLS policies (per PRD Part 2, Feature 2.3)
-- [ ] Run SQL in Supabase SQL editor to create tables, enable RLS, create user-scoping policies
-- [ ] Configure PowerSync sync rules in PowerSync dashboard (bucket_definitions per PRD)
-
-#### Agent D: PostHog Analytics
+#### Agent E: PostHog Analytics
 **PRD ref:** Feature 2.7
 
 - [ ] Install `posthog-react-native`
@@ -541,7 +567,7 @@ npx maestro test flows/          # All flows pass
   - `resetAnalyticsUser()` — reset on logout/delete
 - [ ] Define `AnalyticsEvent` type union with all events from PRD table
 - [ ] Wire init to app startup (after auth)
-- [ ] Wire identify to post-login
+- [ ] Wire identify to post-login (Clerk user id — never email)
 - [ ] Wire reset to logout and account deletion
 - [ ] Add `track()` calls for all events:
   - breeding_record_created, breeding_record_edited, breeding_record_deleted
@@ -552,7 +578,7 @@ npx maestro test flows/          # All flows pass
   - account_created, account_deleted
 - [ ] Verify no PII (animal names, notes, photos) in event properties
 
-#### Agent E: Expo Notifications
+#### Agent F: Expo Notifications
 **PRD ref:** Feature 2.5
 
 - [ ] Install `expo-notifications`
@@ -581,9 +607,9 @@ npx maestro test flows/          # All flows pass
 - [ ] Wire analytics init sequence: auth → analytics → purchases
 - [ ] Wire notification scheduling into breeding create/edit/delete flows
 - [ ] Update Settings screen with full authenticated sections:
-  - Account section: user email row, "Change Password" flow (Supabase `updateUser()`), account detail screen
+  - Account section: user email row, "Change Password" flow (Clerk `user.updatePassword({ currentPassword, newPassword })`), account detail screen
   - "Manage Subscription" row: if paid → subscription details + App Store/Play Store link; if free → navigate to paywall
-  - "Delete Account" button → confirmation → password entry → Edge Function → clear session → welcome screen
+  - "Delete Account" button → confirmation → password re-entry (verify via Clerk sign-in before calling) → `useAuthStore.deleteAccount()` (backend `/api/account/delete`) → welcome screen
   - Notification toggles with real permission requests
   - Export button wired to paid-tier gate
 - [ ] Test unauthenticated flow: continue without account → free tier → all gates work
@@ -611,10 +637,10 @@ npx jest --coverage
   - Action sheet: "Take Photo" / "Choose from Library"
   - Permission request (camera/library)
   - Compress to max 1MB (JPEG, quality 0.8)
-  - Upload to Supabase Storage at `{userId}/breeding/{recordId}/{timestamp}.jpg`
+  - Upload to Vercel Blob: request client-upload token from `POST /api/photos/upload-url` (Phase 7 Agent B), upload to path `{userId}/breeding/{recordId}/{timestamp}.jpg`, store returned Blob URL in `photo_url`
 - [ ] Handle existing photo: action sheet with "Replace Photo" / "Remove Photo"
-- [ ] Remove photo: confirmation dialog → delete from storage → clear `photo_url`
-- [ ] Offline queuing: store locally, sync via PowerSync attachments when online
+- [ ] Remove photo: confirmation dialog → `del(url)` via a backend endpoint (add `POST /api/photos/delete`, `requireUser` + ownership check) → clear `photo_url`
+- [ ] Offline queuing: save file locally (expo-file-system) with a pending flag; retry upload on reconnect; `photo_url` syncs through the normal record sync once set
 - [ ] Photo display on breeding detail screen (16:9 aspect, rounded corners)
 - [ ] Free tier: camera icon with lock badge → upgrade prompt
 - [ ] All error messages per PRD table
@@ -714,22 +740,37 @@ npx maestro test flows/          # All E2E flows pass
 
 > **Why sequential:** Submission-specific tasks with external dependencies.
 
-**Agent assignment:** Single agent
+**Agent assignment:** Single agent (store-account steps require the user)
 
-- [ ] Create privacy policy page content (for freshenapp.com/privacy)
-- [ ] Create app icons (1024x1024 source) + all required sizes via EAS
-- [ ] Create splash screen asset
-- [ ] Configure EAS Build profiles: development, preview, production
+### 10.1 — Accounts + hosting (user)
+- [ ] Enroll in Apple Developer Program ($99/yr) — needed before TestFlight
+- [ ] Create Google Play Console account ($25 one-time)
+- [ ] Register/confirm freshenapp.com; host privacy policy + terms (a static Vercel site fits the stack) at the URLs in `constants/app.ts`
+
+### 10.2 — Build configuration
+- [ ] Create privacy policy + terms page content (data collected: email via Clerk, breeding records via Neon/PowerSync, purchases via RevenueCat, analytics via PostHog)
+- [ ] Verify app icons + splash render correctly (assets exist in `assets/images/` — check 1024×1024 source quality)
+- [ ] `eas init` (links EAS project id into `app.json`) and create `eas.json` with `development`, `preview`, `production` profiles
+- [ ] Set EAS env vars for production: all `EXPO_PUBLIC_*` keys from Phase 7.0 (production values — production Clerk instance, prod PowerSync URL, prod backend URL)
+- [ ] Promote Vercel backend to production domain; set production Clerk keys on it
+- [ ] Clerk: create production instance (Clerk requires a separate prod instance + domain); update PowerSync JWKS URL to prod
 - [ ] Build iOS: `eas build --platform ios --profile production`
 - [ ] Build Android: `eas build --platform android --profile production`
-- [ ] Write App Store description (lead with "breeding-only focus" differentiator)
+
+### 10.3 — Store listings
+- [ ] Write App Store description (lead with "breeding-only focus" differentiator); subtitle from `constants/app.ts`
 - [ ] Create App Store screenshots (6.9", 6.5", 5.5" iPhone; 12.9" iPad)
-- [ ] Configure iOS privacy labels in App Store Connect
-- [ ] Configure Android Data Safety Form in Play Console
-- [ ] Submit to TestFlight for internal testing
-- [ ] Submit to Google Play internal test track
+- [ ] Create Play Store listing (feature graphic 1024×500, phone + tablet screenshots)
+- [ ] Configure iOS privacy labels in App Store Connect (email address, purchases, product interaction — matches privacy policy)
+- [ ] Configure Android Data Safety Form in Play Console (same disclosures)
+- [ ] Create in-app products in App Store Connect + Play Console; link them in RevenueCat (unblocks real-device purchase testing)
+
+### 10.4 — Test tracks + review
+- [ ] Submit to TestFlight for internal testing (`eas submit --platform ios`)
+- [ ] Submit to Google Play internal test track (`eas submit --platform android`)
+- [ ] Full sandbox purchase test on TestFlight build (trial start, purchase, restore)
 - [ ] Address App Review feedback (if any)
-- [ ] Submit for production review
+- [ ] Submit for production review (both stores)
 
 ---
 
@@ -754,11 +795,14 @@ Phase 0 (Scaffold)
                                                          │
                                               Phase 6 (E2E Tests)
                                                          │
-         ┌──→ Phase 7A-A (Auth)         ──┐
-         ├──→ Phase 7A-B (RevenueCat)    ─┤
+                              Phase 7.0 (External accounts — user)
+                                                     │
+         ┌──→ Phase 7A-A (Clerk Auth)    ──┐         │
+         ├──→ Phase 7A-B (Vercel Backend)─┤◄────────┘
          ├──→ Phase 7A-C (PowerSync)     ─┼──→ Phase 7B (Wire Together)
-         ├──→ Phase 7A-D (PostHog)       ─┤         │
-         └──→ Phase 7A-E (Notifications) ─┘         │
+         ├──→ Phase 7A-D (RevenueCat)    ─┤         │
+         ├──→ Phase 7A-E (PostHog)       ─┤         │
+         └──→ Phase 7A-F (Notifications) ─┘         │
                                                      ├──→ Phase 8A (Photos)  ──┐
                                                      └──→ Phase 8B (Export)  ──┤
                                                                                │
@@ -781,7 +825,8 @@ Phase 0 (Scaffold)
 | 4B — Detail + Birth | 2 | Yes | 1 |
 | 5 — Settings + Polish | 1 | No | 1–2 |
 | 6 — E2E Tests | 1 | No | 1 |
-| 7A — Integrations | 5 | Yes | 1–2 |
+| 7.0 — External accounts | user + 1 | No | 1 |
+| 7A — Integrations | 6 | Yes | 1–2 |
 | 7B — Wiring | 1 | No | 1 |
 | 8 — Photos + Export | 2 | Yes | 1 |
 | 9 — QA | 1 | No | 1–2 |

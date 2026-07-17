@@ -41,8 +41,9 @@ The app name, tagline, bundle ID, and Store metadata are isolated in `constants/
 - react-native-reusables (shadcn/ui port — copy-paste components)
 - Drizzle ORM + expo-sqlite (local database, all tiers)
 - date-fns (all date math — required, no raw Date arithmetic)
-- Supabase JS v2 (cloud backend — paid tier only)
-- PowerSync React Native SDK (offline sync — paid tier only)
+- Clerk (`@clerk/clerk-expo`) — authentication (replaces Supabase Auth; see `_dev/backend-stack-decision.md`)
+- Vercel backend — Neon Postgres (PowerSync source), Vercel Functions in `backend/`, Vercel Blob for photos (paid tier only)
+- PowerSync React Native SDK (offline sync — paid tier only; Clerk JWTs via JWKS)
 - RevenueCat SDK (in-app purchases)
 - Zod v3 (input validation)
 - PostHog React Native SDK (product analytics)
@@ -84,8 +85,8 @@ lib/
   schemas.ts             # Zod validation schemas (breedingFormSchema, birthFormSchema)
   tierChecks.ts          # canAddAnimal, canEnableNotification, canSyncToCloud, canUploadPhoto, canExportData, canAccessSpecies
   analytics.ts           # PostHog wrapper — track(), identifyUser(), resetAnalyticsUser()
-  sync.ts                # PowerSync init (paid tier only)
-  supabase.ts            # Supabase client init
+  sync.ts                # PowerSync init (paid tier only) — Clerk token via fetchCredentials, uploads to backend /api/sync/upload
+  clerk.ts               # Clerk tokenCache (expo-secure-store)
   purchases.ts           # RevenueCat helpers
   notifications.ts       # Expo notifications helpers
   secureStorage.ts       # expo-secure-store wrapper
@@ -109,6 +110,7 @@ tests/
     GestationBadge.test.tsx
     BreedingForm.test.tsx
 flows/                   # Maestro E2E test flows (.yaml)
+backend/                 # Vercel Functions project (Phase 7) — Neon Drizzle schema, sync upload, webhooks, account deletion
 ```
 
 ## Key commands
