@@ -1,0 +1,24 @@
+appId: com.freshenapp.freshen
+---
+# Validation: submit empty form -> verify error messages appear
+- launchApp
+- waitForAnimationToEnd
+
+# Tap FAB to add a new entry
+- tapOn: "+"
+- waitForAnimationToEnd
+
+# Verify Add breeding screen
+- assertVisible: "Add breeding"
+
+# Do not fill in any fields — animal name is empty by default
+# Pairing date is pre-filled with today's date, so only animal name will error
+
+# Scroll to Save and tap without filling required fields
+- scrollUntilVisible:
+    element: "Save"
+    direction: DOWN
+- tapOn: "Save"
+
+# Verify the animal name error message appears
+- assertVisible: "Animal name is required."

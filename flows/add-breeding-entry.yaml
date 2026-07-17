@@ -1,0 +1,39 @@
+appId: com.freshenapp.freshen
+---
+# Happy path: launch -> empty state -> tap + -> fill form -> save -> verify card appears
+- launchApp
+- waitForAnimationToEnd
+
+# Verify empty state
+- assertVisible: "No breeding records yet. Tap + to add your first entry."
+
+# Tap FAB to add a new entry
+- tapOn: "+"
+- waitForAnimationToEnd
+
+# Verify Add breeding screen
+- assertVisible: "Add breeding"
+
+# Fill in animal name
+- tapOn: "e.g. Daisy"
+- inputText: "Daisy"
+
+# Fill in sire name
+- tapOn: "e.g. Buck (optional)"
+- inputText: "Thunder"
+
+# Pairing date defaults to today — no need to change
+
+# Species defaults to Goat, gestation defaults to 150 — no need to change
+
+# Scroll down to the Save button and tap it
+- scrollUntilVisible:
+    element: "Save"
+    direction: DOWN
+- tapOn: "Save"
+- waitForAnimationToEnd
+
+# Verify the card appears on the home screen
+- assertVisible: "Daisy"
+- assertVisible: "Thunder"
+- assertVisible: "BRED"

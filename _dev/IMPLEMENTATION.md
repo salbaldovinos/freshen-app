@@ -1,0 +1,803 @@
+# Freshen — Implementation Plan
+
+**Version:** 1.0 | **Created:** 2026-03-18
+**Source PRD:** `_discovery/livestock-breeding-tracker-PRD-v1.2.md`
+**Design System:** `_discovery/kindled-design-system-branding.md`
+**Status:** In Progress
+
+---
+
+## How to use this document
+
+This is the execution plan for building Freshen from zero to App Store submission. It is designed for **agentic development** — AI agents working in parallel where dependencies allow.
+
+**Rules for agents:**
+1. Read the relevant PRD feature section **before** writing any code.
+2. Check off tasks (`- [x]`) as you complete them.
+3. Run the **gate checks** at the end of each phase before starting the next.
+4. When a phase says "parallelizable," agents CAN work on those tasks simultaneously in separate worktrees.
+5. When a phase says "sequential," tasks MUST be completed in order.
+6. Reference `CLAUDE.md` for code conventions, project structure, and business rules.
+7. After completing work, run `npx tsc --noEmit` and `npx eslint . --fix` to validate.
+
+**Progress key:**
+- `[ ]` = Not started
+- `[~]` = In progress
+- `[x]` = Complete
+- `[!]` = Blocked
+
+---
+
+## Phase 0 — Project Scaffold (Sequential)
+
+> **Why sequential:** Every subsequent phase depends on the project skeleton, toolchain, and database being in place. No parallelism possible here.
+
+**Agent assignment:** Single agent
+
+### 0.1 — Initialize Expo project
+- [x] Run `npx create-expo-app@latest freshen --template tabs` (or initialize in current directory)
+- [x] Move generated files into repo root if needed
+- [x] Verify `npx expo start` launches without errors
+- [x] Configure `app.json`: set `name`, `slug`, `bundleIdentifier` to `com.freshenapp.freshen`, `package` to `com.freshenapp.freshen`
+
+### 0.2 — TypeScript strict mode
+- [x] Update `tsconfig.json`: set `strict: true`, `noEmit: true`, `skipLibCheck: true`
+- [x] Verify `npx tsc --noEmit` passes
+
+### 0.3 — Install core dependencies
+- [x] Install NativeWind v4: `nativewind tailwindcss react-native-css-interop`
+- [x] Configure `tailwind.config.js` with content paths and NativeWind preset
+- [x] Configure `babel.config.js` for NativeWind
+- [x] Install Drizzle ORM + expo-sqlite: `drizzle-orm expo-sqlite drizzle-kit`
+- [x] Install Zod: `zod`
+- [x] Install date-fns (should be available via Expo, but confirm import works)
+- [x] Install Zustand: `zustand`
+- [x] Install expo-font for custom fonts
+- [x] Verify all imports resolve with `npx tsc --noEmit`
+
+### 0.4 — Custom fonts
+- [x] Download Cormorant .ttf files (400, 500, 600, 700, Italic 400, Italic 500) → `assets/fonts/`
+- [x] Download DM Sans .ttf files (300, 400, 500, 600) → `assets/fonts/`
+- [x] Configure `useFonts` hook in `app/_layout.tsx`
+- [x] Keep splash screen visible until fonts load (`expo-splash-screen`)
+- [x] Verify fonts render in a test Text component
+
+### 0.5 — UI component library
+- [x] Copy react-native-reusables components into `components/ui/`: Button, Card, Sheet, Dialog, Badge, Toast, Input, Textarea, Select
+- [x] Verify components render without errors
+- [x] Add NativeWind class utilities as needed
+
+### 0.6 — Linting and formatting
+- [x] Install ESLint: `eslint eslint-config-expo @typescript-eslint/eslint-plugin @typescript-eslint/parser eslint-plugin-prettier prettier`
+- [x] Create `.eslintrc.js` with expo config
+- [x] Create `.prettierrc`
+- [x] Verify `npx eslint . --fix` passes
+- [x] Install Husky + lint-staged: `husky lint-staged`
+- [x] Configure pre-commit hook: `tsc --noEmit && eslint --fix`
+
+### 0.7 — Database schema
+- [x] Create `db/schema.ts` with `breedingRecords` table (all columns per PRD Feature 1.2 data schema, including `photo_url`)
+- [x] Create `births` table in `db/schema.ts` (per PRD Feature 1.5 data schema)
+- [x] Create `drizzle.config.ts` pointing to expo-sqlite driver
+- [x] Run `npx drizzle-kit generate` to create initial migration
+- [x] Create database initialization utility in `db/client.ts`
+
+### 0.8 — Constants files
+- [x] Create `constants/app.ts` — APP_NAME, APP_TAGLINE, APP_STORE_SUBTITLE, BUNDLE_ID, SUPPORT_EMAIL, PRIVACY_POLICY_URL, TERMS_URL
+- [x] Create `constants/species.ts` — SPECIES_CONFIG with all 7 species (per PRD Feature 1.6)
+- [x] Create `constants/strings.ts` — all user-facing copy (empty state text, error messages, toasts, labels)
+- [x] Create `constants/theme.ts` — COLORS, STATUS_COLORS, RADIUS, COLOR_TAGS from design system
+
+### 0.9 — Testing infrastructure
+- [x] Install Jest + jest-expo: `jest jest-expo @testing-library/react-native @testing-library/jest-native`
+- [x] Create `jest.config.js` with expo preset
+- [x] Verify `npx jest` runs (even with 0 tests)
+- [x] Create `tests/unit/` and `tests/components/` directories
+
+**Gate check:**
+```bash
+npx expo start          # Must launch
+npx tsc --noEmit        # Must pass
+npx eslint .            # Must pass
+npx jest                # Must run (0 tests OK)
+```
+
+---
+
+## Phase 1 — Core Business Logic (Parallelizable)
+
+> **Why parallel:** These modules have NO dependencies on each other. Each is a pure logic file with unit tests. Deploy 3 agents simultaneously.
+
+### Agent A: Gestation Logic
+**PRD ref:** Feature 1.3
+
+- [x] Create `lib/gestation.ts` with all 4 functions:
+  - `calculateDueDate(pairingDate, gestationDays)` → ISO date string
+  - `calculateDaysBred(pairingDate)` → integer
+  - `calculateDaysRemaining(dueDate)` → integer
+  - `getBreedingStatus(record)` → BreedingStatus enum
+- [x] Use ONLY date-fns: `differenceInCalendarDays`, `addDays`, `parseISO`, `format`
+- [x] Export `BreedingStatus` type: `'bred' | 'pregnant' | 'overdue' | 'birth_logged' | 'archived'`
+- [x] Create `tests/unit/gestation.test.ts`:
+  - `calculateDueDate("2026-01-01", 150)` → `"2026-05-31"`
+  - `calculateDaysBred` with mocked today
+  - `calculateDaysRemaining` — positive, zero, negative cases
+  - `getBreedingStatus` — all 5 status branches
+  - Edge: archived trumps overdue, birth_logged trumps overdue
+- [x] Achieve 100% code coverage on `lib/gestation.ts`
+
+### Agent B: Zod Schemas
+**PRD ref:** Feature 1.2, Feature 1.5, Part 4
+
+- [x] Create `lib/schemas.ts`:
+  - `breedingFormSchema` — all fields per PRD with exact error messages
+  - `birthFormSchema` — birthDate, doesCount, bucksCount, stillbornCount, notes
+  - Helper types: `BreedingFormData`, `BirthFormData` inferred from schemas
+- [x] Create `tests/unit/schemas.test.ts`:
+  - Valid breeding form passes
+  - Empty animal name → "Animal name is required."
+  - Animal name > 50 chars → "Animal name must be 50 characters or less."
+  - Future pairing date → "Pairing date cannot be in the future."
+  - Pairing date > 365 days ago → correct error
+  - Gestation days out of range → correct error
+  - Notes > 500 chars → correct error
+  - Valid birth form passes
+  - All offspring 0 → "Please enter at least one offspring."
+  - Birth date before pairing date → correct error
+
+### Agent C: Tier Checks
+**PRD ref:** Feature 2.2
+
+- [x] Create `lib/tierChecks.ts` with all 6 functions:
+  - `canAddAnimal(currentCount, tier)` — false if free && count >= 10
+  - `canEnableNotification(activeCount, tier)` — false if free && count >= 1
+  - `canSyncToCloud(tier)` — false if free
+  - `canUploadPhoto(tier)` — false if free
+  - `canExportData(tier)` — false if free
+  - `canAccessSpecies(species, tier)` — false if free && species !== 'goat'
+- [x] Export `Tier` type: `'free' | 'paid'`
+- [x] Create `tests/unit/tierChecks.test.ts`:
+  - Each function tested with both tiers
+  - Boundary: canAddAnimal at 9, 10, 11
+  - canAccessSpecies for each of 7 species on each tier
+
+**Gate check (all 3 agents):**
+```bash
+npx jest --coverage     # gestation.ts: 100%, tierChecks.ts: 90%+, schemas.ts: 90%+
+npx tsc --noEmit        # Must pass
+```
+
+---
+
+## Phase 2 — Database Queries (Sequential)
+
+> **Why sequential:** Depends on Phase 0 (schema) and Phase 1 (gestation logic for computed due dates). Single agent.
+
+**Agent assignment:** Single agent
+
+### 2.1 — Breeding queries
+**PRD ref:** Feature 1.1, Feature 1.8
+
+- [x] Create `db/queries/breeding.ts`:
+  - `getAllBreedingRecords()` — fetch all, compute `dueDate` via `calculateDueDate()`, return sorted array
+  - `getBreedingRecordById(id)` — single record
+  - `createBreedingRecord(data)` — insert with UUID v4, timestamps
+  - `updateBreedingRecord(id, data)` — update with new `updatedAt`
+  - `deleteBreedingRecord(id)` — hard delete
+  - `archiveBreedingRecord(id)` — set `archived = true`
+  - `confirmPregnancy(id)` — set `confirmedPregnant = true`
+  - `getUniqueAnimalCount()` — `SELECT COUNT(DISTINCT LOWER(animal_name)) FROM breeding_records WHERE archived = false`
+- [x] All functions use Drizzle ORM query builder
+- [x] All writes set `updatedAt` to ISO 8601 datetime
+
+### 2.2 — Birth queries
+**PRD ref:** Feature 1.5
+
+- [x] Create `db/queries/births.ts`:
+  - `getBirthsByBreedingId(breedingRecordId)` — all births for a record
+  - `createBirth(data)` — insert with UUID v4, timestamps
+  - `hasAnyBirth(breedingRecordId)` — boolean check for status logic
+- [x] Foreign key references `breedingRecords.id` with cascade delete
+
+### 2.3 — Database initialization
+- [x] Create `db/client.ts`:
+  - Initialize expo-sqlite database
+  - Run Drizzle migrations on first launch
+  - Export `db` instance for use across app
+- [x] Wire into `app/_layout.tsx` — initialize DB before rendering children
+
+**Gate check:**
+```bash
+npx tsc --noEmit        # Must pass — queries type-check against schema
+```
+
+---
+
+## Phase 3 — Zustand Stores (Parallelizable)
+
+> **Why parallel:** Each store is independent. Deploy 2 agents.
+
+### Agent A: Breeding Store
+- [x] Create `store/useBreedingStore.ts`:
+  - State: `records`, `isLoading`, `error`, `sortOption`
+  - Actions: `fetchRecords()`, `addRecord()`, `updateRecord()`, `deleteRecord()`, `archiveRecord()`, `confirmPregnancy()`, `setSortOption()`
+  - Sort options enum matching PRD: due date asc/desc, date added newest/oldest, animal name A-Z
+  - `sortOption` persisted to AsyncStorage
+  - All actions call `db/queries/breeding.ts` functions
+
+### Agent B: Tier Store
+- [x] Create `store/useTierStore.ts`:
+  - State: `tier` (free | paid), `isLoading`
+  - Actions: `initialize()` (reads from RevenueCat or defaults to free), `setTier()`
+  - For MVP: always returns 'free' — RevenueCat integration comes in Phase 7
+- [x] Create `store/useAuthStore.ts`:
+  - State: `session`, `user`, `isLoading`, `isAuthenticated`
+  - Actions: `initialize()`, `signIn()`, `signUp()`, `signOut()`, `refreshSession()`
+  - For MVP: unauthenticated mode only — Supabase integration comes in Phase 7
+
+**Gate check:**
+```bash
+npx tsc --noEmit        # Must pass
+```
+
+---
+
+## Phase 4 — MVP Screens (Mixed Parallelism)
+
+> **Strategy:** The home screen and breeding form are the two core screens. They can be built in parallel. The detail screen and birth form depend on shared components from the first two, so they come second.
+
+### Wave 4A — Core Components + Two Main Screens (Parallelizable — 3 agents)
+
+#### Agent A: Shared Components
+**PRD ref:** Feature 1.1 (card spec), Design System Section 7
+
+- [x] Create `components/breeding/GestationBadge.tsx`:
+  - Accepts `status: BreedingStatus`
+  - Renders pill badge with correct bg/text colors per CLAUDE.md status badge table
+  - 5 visual states: Bred (yellow), Pregnant (green), Overdue (red), Birth Logged (blue), Archived (gray)
+- [x] Create `components/breeding/BreedingCard.tsx`:
+  - Displays: animal name (bold), sire name ("× [name]" or "Sire unknown"), days bred counter, due date, status badge
+  - Overdue: red "OVERDUE" banner across top
+  - Long-press → action sheet with: Edit Entry, Mark Pregnant (conditional), Log Birth, Archive (conditional), Delete
+  - Uses `GestationBadge` for status
+  - Uses Cormorant for animal name, DM Sans for labels
+- [ ] Write `tests/components/BreedingCard.test.tsx` — all 5 status states render correctly, overdue banner shows/hides
+- [ ] Write `tests/components/GestationBadge.test.tsx` — correct color/text per status
+
+#### Agent B: Home Screen (Breeding List)
+**PRD ref:** Feature 1.1
+
+- [x] Create `app/(tabs)/index.tsx`:
+  - **Empty state:** Illustration placeholder + "No breeding records yet. Tap + to add your first entry." + FAB
+  - **Loading state:** 3 skeleton placeholder cards
+  - **Populated state:** FlatList of `BreedingCard` components, sorted by `sortOption`
+  - **Error state:** "Something went wrong loading your records. Pull down to try again."
+  - Header: total active record count ("3 active breedings.")
+  - Sort icon (top-right) → sort options bottom sheet
+  - Pull-to-refresh triggers re-query
+  - FAB (+) bottom-right → navigates to Add screen
+- [x] Sort preference persists via useBreedingStore
+- [x] Active/overdue entries appear before archived entries
+
+#### Agent C: Add/Edit Breeding Form
+**PRD ref:** Feature 1.2
+
+- [x] Create `components/breeding/BreedingForm.tsx`:
+  - All form fields per PRD: Animal Name, Sire Name, Pairing Date, Species, Gestation Days, Notes, Color/Tag
+  - Species defaults to "Goat", Pairing Date defaults to today, Gestation Days auto-fills from SPECIES_CONFIG
+  - Gestation days auto-fill behavior: confirm before overwriting manual edits
+  - Live due date preview below Pairing Date and Gestation Days
+  - Species picker: only "Goat" enabled in MVP; others show "Coming soon" disabled
+  - Validates via Zod `breedingFormSchema` on submit
+  - Inline field errors with exact PRD copy
+  - Character counter on Notes field
+- [x] Create `app/(tabs)/add.tsx`:
+  - **Add mode:** title "Add Breeding", empty fields (except defaults)
+  - **Edit mode:** title "Edit Breeding", pre-populated fields, "Save Changes" button
+  - Save → write to SQLite via breeding store, navigate back, toast "Breeding record saved."
+  - Delete (edit mode only) → confirmation dialog → delete → navigate back → toast "Record deleted."
+- [ ] Write `tests/components/BreedingForm.test.tsx` — validation errors render on bad data
+
+### Wave 4B — Detail + Birth Screens (Parallelizable — 2 agents)
+
+> **Depends on:** Wave 4A components (BreedingCard, GestationBadge, BreedingForm)
+
+#### Agent A: Breeding Detail Screen
+**PRD ref:** Feature 1.7
+
+- [x] Create `components/breeding/BreedingDetail.tsx` — the content component
+- [x] Create `app/breeding/[id].tsx`:
+  - Header: back button, animal name title, Edit button (top-right)
+  - Photo section placeholder (paid tier, shows lock badge in MVP)
+  - Status section with badge + "Mark Pregnant" button (only if status = Bred)
+  - Stats row: Days Bred | Days Left | Due Date (Cormorant display numbers)
+  - Info section: Sire, Species, Pairing Date, Gestation days, Color tag
+  - Notes section (only if notes exist)
+  - Birth history section:
+    - No births: "No births logged yet." + "Log Birth" button
+    - Has births: list of birth summary cards with species-specific terms + "Log Another Birth" button
+  - Actions: Archive/Unarchive toggle button (Archive only if no birth logged and not archived; Unarchive if archived), Delete button (red)
+  - **States:** Loading (skeleton), Populated, Error, Deleted externally
+- [x] Mark Pregnant from detail: same behavior as action sheet (Feature 1.4)
+- [x] Unarchive flow: detail screen shows "Unarchive" button for archived records → sets `archived = false`, updates `updatedAt`, returns record to active list, may re-count toward animal limit
+
+#### Agent B: Log Birth Screen
+**PRD ref:** Feature 1.5
+
+- [x] Create `app/birth/[breedingId].tsx`:
+  - Title: "Log Birth — [Animal Name]"
+  - Birth Date picker (default today, cannot be before pairing date, cannot be future)
+  - Offspring counts: Does (female), Bucks (male), Stillborn — number inputs 0–20
+  - Notes textarea (max 300 chars)
+  - "Save Birth Record" button
+  - Validation: total offspring ≥ 1, all counts ≤ 20
+  - Exact error messages per PRD
+  - Save → write birth record, navigate back, toast "Birth logged for [animal name].", status badge updates
+- [x] Uses species-specific offspring terms from SPECIES_CONFIG (e.g., "Ewe lamb" for sheep)
+
+**Gate check (all of Phase 4):**
+```bash
+npx tsc --noEmit                 # Must pass
+npx eslint .                     # Must pass
+npx jest --coverage              # Component tests pass
+npx expo start                   # App launches, screens render
+```
+
+**Manual verification:**
+- [ ] Empty state renders on first launch
+- [ ] Can add a breeding record and see it on home screen
+- [ ] Card shows correct status, days bred, due date
+- [ ] Can tap card → detail screen renders all sections
+- [ ] Can mark pregnant → badge changes immediately
+- [ ] Can log birth → status updates to "Birth Logged"
+- [ ] Can edit and delete records
+- [ ] Sort options work and persist
+- [ ] Long-press action sheet shows correct options per record state
+- [ ] Overdue banner shows for records past due date
+- [ ] Form validation shows all required error messages
+
+---
+
+## Phase 5 — Settings Screen + MVP Polish (Sequential)
+
+> **Why sequential:** Settings is the last MVP screen. Polish tasks depend on all screens being in place.
+
+**Agent assignment:** Single agent
+
+### 5.1 — Settings screen (MVP subset)
+**PRD ref:** Feature 2.9 (MVP-relevant sections only)
+
+- [x] Create `app/(tabs)/settings.tsx`:
+  - **ACCOUNT section (unauthenticated):** "Create Account" button + "Sign In" link (both navigate nowhere in MVP — placeholder)
+  - **NOTIFICATIONS section:** Placeholder — "Due date reminders" toggle (non-functional in MVP)
+  - **DATA section:** "Export My Data" with lock badge (non-functional in MVP — shows "Coming in Pro")
+  - **ABOUT section:** Privacy Policy link (opens URL), Terms link (opens URL), Version display
+- [x] Version display reads from `expo-constants` (app version + build number)
+
+### 5.2 — Navigation wiring
+- [x] Verify all routes work: `/(tabs)/index`, `/(tabs)/add`, `/(tabs)/settings`, `/breeding/[id]`, `/birth/[breedingId]`
+- [x] Tab bar: Home (list icon), Add (+ icon), Settings (gear icon)
+- [x] Back navigation works correctly from all screens
+- [x] Pass `breedingId` param correctly between screens
+
+### 5.3 — Toast system
+- [x] Wire up toast notifications for all success/error messages per PRD
+- [x] Toasts: "Breeding record saved.", "Record deleted.", "Pregnancy confirmed for [name].", "Birth logged for [name]."
+
+### 5.4 — Visual polish
+- [x] Apply design system colors throughout (Parchment backgrounds, Bark text, Ember CTAs)
+- [x] Apply Cormorant font for display text (titles, animal names, stat numbers)
+- [x] Apply DM Sans font for interface text (labels, buttons, body copy)
+- [x] Verify all status badge colors match CLAUDE.md table
+- [x] Verify all spacing, radius, shadow values match design system
+- [x] No emoji anywhere in UI
+
+### 5.5 — Confirm pregnancy flow
+**PRD ref:** Feature 1.4
+
+- [x] Long-press → "Mark Pregnant" → instant update, badge change, toast
+- [x] Detail screen "Mark Pregnant" button → same behavior
+- [x] Button/option hidden when already pregnant
+- [x] Verify persistence across app restart
+
+**Gate check — MVP COMPLETE:**
+```bash
+npx tsc --noEmit
+npx eslint .
+npx jest --coverage              # 90%+ on lib/, 80%+ overall
+npx expo start                   # Full MVP walkthrough
+```
+
+**MVP acceptance test (manual walkthrough):**
+- [ ] Fresh install → empty state
+- [ ] Add breeding record → appears in list sorted by due date
+- [ ] Edit record → changes reflected
+- [ ] Mark pregnant → status changes
+- [ ] Log birth → status changes to Birth Logged
+- [ ] Archive record → moves below active records
+- [ ] Delete record → removed from list
+- [ ] Sort by all 5 options → order changes correctly
+- [ ] Pull-to-refresh → list refreshes
+- [ ] All 5 status badge states render correctly
+- [ ] All form validation errors show exact PRD copy
+- [ ] All toast messages match PRD copy
+- [ ] Settings screen renders with about section
+- [ ] App works fully offline (no network calls in MVP)
+
+---
+
+## Phase 6 — E2E Tests (Sequential)
+
+> **Why sequential:** Depends on all MVP screens being functional.
+
+**Agent assignment:** Single agent
+
+- [ ] Install Maestro CLI
+- [x] Create `flows/add-breeding-entry.yaml` — happy path: launch → empty state → tap + → fill form → save → verify card
+- [x] Create `flows/add-breeding-validation.yaml` — submit empty form → verify error messages
+- [x] Create `flows/mark-pregnant.yaml` — long press → mark pregnant → verify badge change
+- [x] Create `flows/log-birth.yaml` — long press → log birth → verify status change
+- [x] Create `flows/sort-records.yaml` — change sort order → verify list reorders
+- [ ] Run all flows on iOS simulator: `npx maestro test flows/`
+- [ ] Run all flows on Android emulator: `npx maestro test flows/`
+- [ ] Fix any platform-specific issues
+
+**Gate check:**
+```bash
+npx maestro test flows/          # All flows pass
+```
+
+---
+
+## Phase 7 — v1.0 Backend + Integrations (Mixed Parallelism)
+
+> **Strategy:** Auth, RevenueCat, PowerSync, PostHog, and Notifications are largely independent integrations. Build them in parallel, then wire them together.
+
+### Wave 7A — Independent Integrations (Parallelizable — 5 agents)
+
+#### Agent A: Supabase Auth
+**PRD ref:** Feature 2.1
+
+- [ ] Install `@supabase/supabase-js` and `expo-secure-store`
+- [ ] Create `lib/supabase.ts` — Supabase client with secure storage adapter
+- [ ] Create `lib/secureStorage.ts` — expo-secure-store wrapper
+- [ ] Update `store/useAuthStore.ts` — real auth state management:
+  - `signUp(email, password)` → Supabase `signUp()`
+  - `signIn(email, password)` → Supabase `signInWithPassword()`
+  - `signOut()` → clear session
+  - `refreshSession()` → silent refresh on app resume
+  - `deleteAccount()` → calls Edge Function
+- [ ] Create `app/welcome.tsx`:
+  - Logo, tagline, "Get Started Free", "Sign In", "Continue without an account"
+- [ ] Create `app/register.tsx`:
+  - Email input (validated on blur), password input (show/hide, strength indicator)
+  - "Create Account" → loading → verification pending screen
+  - All error messages per PRD table
+- [ ] Create `app/login.tsx`:
+  - Email + password, "Sign In" button
+  - All error messages per PRD table
+- [ ] Update `app/_layout.tsx`:
+  - Auth guard: check session → redirect to welcome if none
+  - Session refresh on AppState change
+- [ ] Wire "Continue without an account" → skip to home (free tier, no sync)
+- [ ] Create Supabase Edge Function for account deletion (`deleteUser()` with service role)
+- [ ] Test Edge Function: account + all associated data removed from Supabase
+
+#### Agent B: RevenueCat + Tier Enforcement
+**PRD ref:** Feature 2.2, Feature 2.6
+
+- [ ] Install `react-native-purchases`
+- [ ] Create `lib/purchases.ts`:
+  - `initializePurchases(userId)` — configure with platform API key
+  - `getOfferings()` — fetch current offerings
+  - `purchasePackage(pkg)` — handle purchase with error cases
+  - `restorePurchases()` — restore flow
+  - `isPaidTier(customerInfo)` — check 'pro' entitlement
+- [ ] Update `store/useTierStore.ts`:
+  - Read entitlement from RevenueCat on launch
+  - `purchaseAndUpdate()` action
+  - `restoreAndUpdate()` action
+- [ ] Create `components/PaywallBottomSheet.tsx`:
+  - Headline: "Upgrade to Freshen Pro" (use APP_NAME from constants)
+  - Feature bullets, price display (annual/monthly/lifetime)
+  - 7-day free trial badge on annual
+  - "Start Free Trial" CTA, "Restore Purchases" link
+  - "No thanks" dismiss (soft paywalls only)
+- [ ] Wire tier checks into Add form (intercept navigation if animal limit reached)
+- [ ] Add lock badges to species picker for non-goat species
+- [ ] Wire PaywallBottomSheet to all 3 paywall moments (animal limit, feature gate, contextual)
+- [ ] All error messages per PRD table (purchase errors, restore errors)
+- [ ] Create Supabase Edge Function for RevenueCat webhook → updates `users.tier` column on purchase events
+- [ ] Test webhook: purchase event → tier updates server-side
+
+#### Agent C: PowerSync Cloud Sync
+**PRD ref:** Feature 2.3
+
+- [ ] Install `@powersync/react-native` and `@powersync/attachments`
+- [ ] Create `db/powersync-schema.ts` — mirrors SQLite schema for PowerSync
+- [ ] Create `lib/sync.ts`:
+  - PowerSync database initialization (only for paid + authenticated)
+  - Sync status monitoring: connected, connecting, disconnected, syncing
+  - Connection/disconnection lifecycle
+- [ ] Create `components/breeding/StatusIndicator.tsx`:
+  - Cloud + checkmark (green): synced
+  - Cloud + arrows (blue, animated): syncing
+  - Cloud + slash (gray): offline
+  - Tap → bottom sheet with last sync time
+- [ ] Add StatusIndicator to home screen header (only for paid tier)
+- [ ] Conditional: skip PowerSync init entirely for free-tier users
+- [ ] Create Supabase SQL schema: `breeding_records` and `births` tables with RLS policies (per PRD Part 2, Feature 2.3)
+- [ ] Run SQL in Supabase SQL editor to create tables, enable RLS, create user-scoping policies
+- [ ] Configure PowerSync sync rules in PowerSync dashboard (bucket_definitions per PRD)
+
+#### Agent D: PostHog Analytics
+**PRD ref:** Feature 2.7
+
+- [ ] Install `posthog-react-native`
+- [ ] Create `lib/analytics.ts`:
+  - `initializeAnalytics(userId)` — init with API key, disable in __DEV__
+  - `track(event, properties)` — capture event
+  - `identifyUser(userId)` — identify after login
+  - `resetAnalyticsUser()` — reset on logout/delete
+- [ ] Define `AnalyticsEvent` type union with all events from PRD table
+- [ ] Wire init to app startup (after auth)
+- [ ] Wire identify to post-login
+- [ ] Wire reset to logout and account deletion
+- [ ] Add `track()` calls for all events:
+  - breeding_record_created, breeding_record_edited, breeding_record_deleted
+  - pregnancy_confirmed, birth_logged, sort_order_changed
+  - paywall_viewed, upgrade_tapped, purchase_completed, purchase_cancelled, purchase_restored
+  - notification_permission_granted/denied
+  - export_triggered, photo_added, photo_removed
+  - account_created, account_deleted
+- [ ] Verify no PII (animal names, notes, photos) in event properties
+
+#### Agent E: Expo Notifications
+**PRD ref:** Feature 2.5
+
+- [ ] Install `expo-notifications`
+- [ ] Create `lib/notifications.ts`:
+  - `requestPermissions()` → boolean
+  - `scheduleBreedingNotifications(record)` — schedule 4 notifications per record (7d, 3d, 1d, due date)
+  - `cancelBreedingNotifications(breedingRecordId)` — cancel by identifier pattern
+  - `cancelAllNotifications()`
+- [ ] Notification identifiers: `breeding-{breedingRecordId}-{daysBefore}`
+- [ ] Notification content uses exact copy from PRD table (no emoji)
+- [ ] Schedule on record create/edit, cancel on birth log/delete
+- [ ] Free tier enforcement: only closest due date gets notification
+- [ ] Permission request on registration success (before navigating to home)
+- [ ] Handle permission denied: non-blocking banner
+- [ ] Add notification preferences to Settings screen (reminder timing picker, paid-only customization)
+
+### Wave 7B — Integration Wiring (Sequential)
+
+> **Depends on:** All Wave 7A agents complete.
+
+**Agent assignment:** Single agent
+
+- [ ] Wire auth flow end-to-end: welcome → register/login → home
+- [ ] Wire tier store to RevenueCat on app launch
+- [ ] Wire PowerSync init: only if paid + authenticated
+- [ ] Wire analytics init sequence: auth → analytics → purchases
+- [ ] Wire notification scheduling into breeding create/edit/delete flows
+- [ ] Update Settings screen with full authenticated sections:
+  - Account section: user email row, "Change Password" flow (Supabase `updateUser()`), account detail screen
+  - "Manage Subscription" row: if paid → subscription details + App Store/Play Store link; if free → navigate to paywall
+  - "Delete Account" button → confirmation → password entry → Edge Function → clear session → welcome screen
+  - Notification toggles with real permission requests
+  - Export button wired to paid-tier gate
+- [ ] Test unauthenticated flow: continue without account → free tier → all gates work
+- [ ] Test authenticated free flow: sign up → free tier → animal limit → paywall
+- [ ] Test authenticated paid flow: sign up → purchase → full access → sync active
+
+**Gate check:**
+```bash
+npx tsc --noEmit
+npx eslint .
+npx jest --coverage
+```
+
+---
+
+## Phase 8 — Photos + Data Export (Parallelizable — 2 agents)
+
+> **Why parallel:** Photos and export are independent paid-tier features.
+
+### Agent A: Photo Uploads
+**PRD ref:** Feature 2.4
+
+- [ ] Install `expo-image-picker` and `expo-image-manipulator`
+- [ ] Create photo capture flow:
+  - Action sheet: "Take Photo" / "Choose from Library"
+  - Permission request (camera/library)
+  - Compress to max 1MB (JPEG, quality 0.8)
+  - Upload to Supabase Storage at `{userId}/breeding/{recordId}/{timestamp}.jpg`
+- [ ] Handle existing photo: action sheet with "Replace Photo" / "Remove Photo"
+- [ ] Remove photo: confirmation dialog → delete from storage → clear `photo_url`
+- [ ] Offline queuing: store locally, sync via PowerSync attachments when online
+- [ ] Photo display on breeding detail screen (16:9 aspect, rounded corners)
+- [ ] Free tier: camera icon with lock badge → upgrade prompt
+- [ ] All error messages per PRD table
+
+### Agent B: Data Export (CSV + PDF)
+**PRD ref:** Feature 2.8
+
+- [ ] Install `react-native-html-to-pdf` and `expo-sharing` and `expo-file-system`
+- [ ] Create `lib/export.ts`:
+  - `exportToCSV(records, births, filters)` — string builder, proper escaping
+  - `exportToPDF(records, births, filters)` — HTML template → PDF
+- [ ] CSV: all columns per PRD table, file name `freshen-export-YYYY-MM-DD.csv`
+- [ ] PDF: header with logo, summary block, records grouped by status, footer, page numbers
+- [ ] Create `app/export.tsx`:
+  - Format picker (CSV | PDF)
+  - Date range filter (All time | This year | Last 12 months | Custom)
+  - Species filter (multi-select)
+  - Status filter (checkboxes)
+  - Preview count: "23 records will be exported."
+  - Export → share sheet
+- [ ] Wire to Settings: "Export My Data" → paid tier gate → export screen
+- [ ] Error: no matching records, generation failure, share sheet unavailable
+- [ ] Unit tests: CSV output verification (headers, row count, escaping), PDF generates without error
+
+**Gate check:**
+```bash
+npx tsc --noEmit
+npx eslint .
+npx jest --coverage
+```
+
+---
+
+## Phase 9 — Final Integration + QA (Sequential)
+
+> **Why sequential:** This is the integration testing and polish phase. Must be methodical.
+
+**Agent assignment:** Single agent
+
+### 9.1 — Full integration test
+- [ ] Clean install on iOS simulator — run through entire user journey:
+  1. First launch → welcome screen
+  2. Continue without account → free tier
+  3. Add 3 breeding records → verify list, sort, cards
+  4. Mark one pregnant → verify badge change
+  5. Log birth for one → verify status change
+  6. Try to add animal #11 → paywall appears
+  7. Go to settings → verify all sections render
+  8. Detail screen for each record → verify all sections
+- [ ] Same walkthrough on Android emulator
+- [ ] Fix any platform-specific layout issues
+
+### 9.2 — Authenticated + paid tier test
+- [ ] Sign up with test account → verify email flow
+- [ ] Purchase via StoreKit sandbox → tier updates
+- [ ] Add records → verify sync indicator appears
+- [ ] Go offline → add record → go online → verify sync
+- [ ] Upload photo → verify display
+- [ ] Export CSV and PDF → verify file contents
+- [ ] Custom notification timing → verify
+
+### 9.3 — Edge case testing
+- [ ] Delete all records → empty state returns
+- [ ] Record with very long animal name (50 chars) → layout doesn't break
+- [ ] Record with no sire → "Sire unknown" displays
+- [ ] Multiple births on single record → all show in detail
+- [ ] Archive record → moves below active, frees animal slot
+- [ ] Unarchive by editing → moves back to active
+- [ ] Overdue record → banner + badge correct
+- [ ] App kill and relaunch → data persists, state correct
+
+### 9.4 — Performance checks
+- [ ] List with 100 records → renders in < 100ms
+- [ ] Cold launch → interactive in < 2 seconds
+- [ ] SQLite write → < 50ms
+
+### 9.5 — Code quality final pass
+- [ ] Remove all `console.log` from production code paths
+- [ ] Remove all `TODO` comments
+- [ ] Verify no hardcoded strings in UI (all from constants/strings.ts)
+- [ ] Verify APP_NAME never hardcoded (always from constants/app.ts)
+- [ ] Verify no raw Date arithmetic (all via date-fns in lib/gestation.ts)
+- [ ] Verify no tier checks in UI components (all via lib/tierChecks.ts)
+- [ ] Verify no PostHog calls outside lib/analytics.ts
+
+**Gate check — v1.0 FEATURE COMPLETE:**
+```bash
+npx tsc --noEmit                 # Zero errors
+npx eslint .                     # Zero errors
+npx jest --coverage              # 90%+ on lib/, 80%+ overall
+npx maestro test flows/          # All E2E flows pass
+```
+
+---
+
+## Phase 10 — App Store Prep (Sequential)
+
+> **Why sequential:** Submission-specific tasks with external dependencies.
+
+**Agent assignment:** Single agent
+
+- [ ] Create privacy policy page content (for freshenapp.com/privacy)
+- [ ] Create app icons (1024x1024 source) + all required sizes via EAS
+- [ ] Create splash screen asset
+- [ ] Configure EAS Build profiles: development, preview, production
+- [ ] Build iOS: `eas build --platform ios --profile production`
+- [ ] Build Android: `eas build --platform android --profile production`
+- [ ] Write App Store description (lead with "breeding-only focus" differentiator)
+- [ ] Create App Store screenshots (6.9", 6.5", 5.5" iPhone; 12.9" iPad)
+- [ ] Configure iOS privacy labels in App Store Connect
+- [ ] Configure Android Data Safety Form in Play Console
+- [ ] Submit to TestFlight for internal testing
+- [ ] Submit to Google Play internal test track
+- [ ] Address App Review feedback (if any)
+- [ ] Submit for production review
+
+---
+
+## Dependency Graph
+
+```
+Phase 0 (Scaffold)
+    │
+    ├──→ Phase 1A (Gestation) ──┐
+    ├──→ Phase 1B (Schemas)  ───┼──→ Phase 2 (DB Queries)
+    └──→ Phase 1C (Tier Checks)─┘         │
+                                           ├──→ Phase 3A (Breeding Store) ──┐
+                                           └──→ Phase 3B (Tier/Auth Store) ─┤
+                                                                            │
+         ┌──────────────────────────────────────────────────────────────────┘
+         │
+         ├──→ Phase 4A-AgentA (Components) ──┐
+         ├──→ Phase 4A-AgentB (Home Screen) ─┼──→ Phase 4B-AgentA (Detail) ──┐
+         └──→ Phase 4A-AgentC (Add/Edit)  ───┘    Phase 4B-AgentB (Birth)  ──┤
+                                                                              │
+                                              Phase 5 (Settings + Polish) ◄───┘
+                                                         │
+                                              Phase 6 (E2E Tests)
+                                                         │
+         ┌──→ Phase 7A-A (Auth)         ──┐
+         ├──→ Phase 7A-B (RevenueCat)    ─┤
+         ├──→ Phase 7A-C (PowerSync)     ─┼──→ Phase 7B (Wire Together)
+         ├──→ Phase 7A-D (PostHog)       ─┤         │
+         └──→ Phase 7A-E (Notifications) ─┘         │
+                                                     ├──→ Phase 8A (Photos)  ──┐
+                                                     └──→ Phase 8B (Export)  ──┤
+                                                                               │
+                                                     Phase 9 (QA) ◄────────────┘
+                                                         │
+                                                     Phase 10 (App Store)
+```
+
+---
+
+## Agent Deployment Summary
+
+| Phase | Agents | Parallelizable | Estimated Prompts |
+|-------|--------|---------------|-------------------|
+| 0 — Scaffold | 1 | No | 1–2 |
+| 1 — Core Logic | 3 | Yes | 1 |
+| 2 — DB Queries | 1 | No | 1 |
+| 3 — Stores | 2 | Yes | 1 |
+| 4A — Core Screens | 3 | Yes | 1–2 |
+| 4B — Detail + Birth | 2 | Yes | 1 |
+| 5 — Settings + Polish | 1 | No | 1–2 |
+| 6 — E2E Tests | 1 | No | 1 |
+| 7A — Integrations | 5 | Yes | 1–2 |
+| 7B — Wiring | 1 | No | 1 |
+| 8 — Photos + Export | 2 | Yes | 1 |
+| 9 — QA | 1 | No | 1–2 |
+| 10 — App Store | 1 | No | 1–2 |
+| **Total** | — | — | **~13–18 prompts** |
+
+---
+
+## How to Start a Phase
+
+When beginning a new phase, the agent should:
+
+1. Read this file — check which phase is next (first incomplete phase)
+2. Read the PRD sections referenced in that phase
+3. Read `CLAUDE.md` for code conventions and project structure
+4. Complete all tasks in order (or in parallel if marked)
+5. Run the gate check commands
+6. Mark all tasks `[x]` in this file
+7. Report: which tasks completed, any issues, gate check results

@@ -1,0 +1,53 @@
+appId: com.freshenapp.freshen
+---
+# Log birth: add a record -> navigate to detail -> log birth -> verify status changes
+- launchApp
+- waitForAnimationToEnd
+
+# First, add a breeding record
+- tapOn: "+"
+- waitForAnimationToEnd
+- tapOn: "e.g. Daisy"
+- inputText: "Clover"
+- tapOn: "e.g. Buck (optional)"
+- inputText: "Duke"
+- scrollUntilVisible:
+    element: "Save"
+    direction: DOWN
+- tapOn: "Save"
+- waitForAnimationToEnd
+
+# Verify the card is visible
+- assertVisible: "Clover"
+
+# Long press to open the action sheet
+- longPressOn: "Clover"
+- waitForAnimationToEnd
+
+# Tap "Log birth" from the action sheet
+- tapOn: "Log birth"
+- waitForAnimationToEnd
+
+# Verify we are on the Log birth screen
+- assertVisible: "Log birth"
+
+# Birth date defaults to today — no need to change
+
+# Fill in offspring counts — tap the does field and enter 2
+- tapOn: "Doe (female)"
+- inputText: "2"
+
+# Fill in bucks count
+- tapOn: "Buck (male)"
+- inputText: "1"
+
+# Tap the save button
+- scrollUntilVisible:
+    element: "Save birth record"
+    direction: DOWN
+- tapOn: "Save birth record"
+- waitForAnimationToEnd
+
+# Verify the status changed to BIRTH LOGGED on the home screen
+- assertVisible: "BIRTH LOGGED"
+- assertVisible: "Clover"
